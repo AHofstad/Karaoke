@@ -38,7 +38,10 @@ export interface LaneOptions {
 }
 
 const NEXT_LINE_SCALE = 0.6;
-const COUNTDOWN_THRESHOLD_MS = 4000;
+/** Countdown shows only for silences longer than this... */
+const COUNTDOWN_MIN_GAP_MS = 5000;
+/** ...and only within this window before the next phrase. */
+const COUNTDOWN_WINDOW_MS = 5000;
 
 interface LayoutCacheEntry {
   phraseIndex: number;
@@ -73,10 +76,16 @@ export class LyricsLane {
       this.drawUpcoming(ctx, nextLayout, width, opts.centerY + opts.baseFontSize * 1.15, opts.colors);
     }
 
-    // Countdown dots when the current phrase is still upcoming: one dot per
-    // second, counting down to zero exactly when singing starts.
+    // Countdown dots: only for long silences (> 5s since the previous phrase
+    // or song start), and only in the final 5 seconds — one dot per second,
+    // reaching zero exactly when singing starts.
     if (nowMs < current.startMs) {
-      this.drawCountdown(ctx, current.startMs - nowMs, width, opts);
+      const prevEndMs = idx > 0 ? this.phrases[idx - 1].endMs : 0;
+      const gapMs = current.startMs - prevEndMs;
+      const remainingMs = current.startMs - nowMs;
+      if (gapMs > COUNTDOWN_MIN_GAP_MS && remainingMs <= COUNTDOWN_WINDOW_MS) {
+        this.drawCountdown(ctx, remainingMs, width, opts);
+      }
     }
   }
 
@@ -166,7 +175,7 @@ export class LyricsLane {
     width: number,
     opts: LaneOptions,
   ): void {
-    const total = COUNTDOWN_THRESHOLD_MS / 1000; // one dot per second
+    const total = COUNTDOWN_WINDOW_MS / 1000; // one dot per second
     const dots = Math.min(total, Math.ceil(remainingMs / 1000));
     if (dots <= 0) return;
     const r = 7;
