@@ -28,7 +28,8 @@ try {
 }
 
 if ($latest -and $installed -ne $latest) {
-    Write-Host "Updating ffmpeg $($installed ?? '(none)') -> $latest..." -ForegroundColor Cyan
+    $installedLabel = if ($installed) { $installed } else { "(none)" }
+    Write-Host "Updating ffmpeg $installedLabel -> $latest..." -ForegroundColor Cyan
     $zip = Join-Path $env:TEMP "ffmpeg-release-essentials.zip"
     $extract = Join-Path $env:TEMP "ffmpeg-release-essentials"
     Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $zip
