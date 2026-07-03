@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
+  import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { songEndMs, timePhrases } from "../playback/clock";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
@@ -15,8 +16,13 @@
   let videoReady = $state(false);
   // svelte-ignore state_referenced_locally
   let audioSrc = $state(loaded.audioUrl);
+  // svelte-ignore state_referenced_locally
+  let videoSrc = $state(loaded.videoUrl);
   let triedBlobFallback = false;
+  let triedAudioTranscode = false;
+  let triedVideoTranscode = false;
   let blobUrl: string | undefined;
+  let notice = $state("");
 
   // The component is remounted per song, so capturing the initial prop value is intended.
   // svelte-ignore state_referenced_locally
@@ -151,6 +157,22 @@
   }
 
   function onVideoError() {
+    // Undecodable container (avi/xvid): convert once in the background and
+    // swap in the cached mp4; the image fallback shows meanwhile.
+    if (!triedVideoTranscode && loaded.videoFileName) {
+      triedVideoTranscode = true;
+      videoFailed = true;
+      void transcodeVideoToMp4(loaded.dir, loaded.videoFileName)
+        .then((url) => {
+          videoReady = false;
+          videoSrc = url;
+          videoFailed = false;
+        })
+        .catch(() => {
+          // Video is optional: stay on the image fallback.
+        });
+      return;
+    }
     videoFailed = true;
   }
 
@@ -175,6 +197,22 @@
         });
       return;
     }
+    // Still undecodable: the codec itself is unsupported (e.g. MPEG Layer II
+    // in a .mp3). Convert once with ffmpeg and play the cached result.
+    if (!triedAudioTranscode && loaded.audioFileName) {
+      triedAudioTranscode = true;
+      notice = "Converting audio…";
+      void transcodeAudioToMp3(loaded.dir, loaded.audioFileName)
+        .then((url) => {
+          notice = "";
+          audioSrc = url;
+        })
+        .catch((e) => {
+          notice = "";
+          error = `Could not convert audio (${detail}): ${e}`;
+        });
+      return;
+    }
     error = `Could not load audio: ${loaded.song.audioFile ?? "unknown file"} (${detail})`;
   }
 
@@ -190,12 +228,12 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="sing">
-  {#if loaded.videoUrl && !videoFailed}
+  {#if videoSrc && !videoFailed}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
       class:ready={videoReady}
-      src={loaded.videoUrl}
+      src={videoSrc}
       muted={!videoIsMaster}
       onloadedmetadata={onVideoReady}
       onerror={onVideoError}
@@ -228,6 +266,10 @@
 
   {#if error}
     <div class="overlay"><div class="pause-box">{error}</div></div>
+  {/if}
+
+  {#if notice}
+    <div class="notice">{notice}</div>
   {/if}
 </div>
 
@@ -276,6 +318,16 @@
   .pause-box {
     color: #fff;
     text-align: center;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  .notice {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    padding: 0.4em 0.9em;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #ffcf40;
     font-family: "Segoe UI", system-ui, sans-serif;
   }
 </style>
