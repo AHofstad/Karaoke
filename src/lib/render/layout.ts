@@ -43,12 +43,15 @@ export function layoutPhrase(
 
 function measure(ctx: CanvasRenderingContext2D, notes: Note[], fontSize: number): SyllableBox[] {
   const boxes: SyllableBox[] = [];
+  // Small gap between syllables so each one reads as its own unit — helps a
+  // lot when singing unfamiliar languages (Japanese romaji, etc.).
+  const syllableGap = fontSize * 0.14;
   let x = 0;
   for (const note of notes) {
     ctx.font = lyricFont(fontSize, note.type === "freestyle");
     const width = ctx.measureText(note.text).width;
     boxes.push({ note, x, width });
-    x += width;
+    x += width + syllableGap;
   }
   return boxes;
 }
