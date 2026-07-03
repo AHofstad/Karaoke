@@ -124,7 +124,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* point at `Research\songs`: 47 entries, Roundabout absent, "creepy" → 5 hits, "オトノケ" → found.
 - [x] **M6 — Queue + LAN remote:** *(API + autostart + skip verified over HTTP locally; phone-on-Wi-Fi test pending)* queue engine with auto-advance **and skip** (skip current song mid-play → next in queue, or back to song list if queue empty; keyboard shortcut + on-screen button + `POST /api/skip` from remote page), axum server, remote web page, QR/URL display.
   *Verify:* phone on same Wi-Fi opens page, searches "creed", queues 2 songs; desktop plays them in order; skipping mid-song jumps to next queued song; local + remote adds interleave correctly.
-- [ ] **M7 — Packaging:** NSIS installer + portable zip, icon, first-run folder picker.
+- [x] **M7 — Packaging:** *(installer 28.7 MB + portable zip 40.6 MB in dist\; release exe verified — window + LAN API. Clean-VM test + first-run icon polish pending)* NSIS installer + portable zip, icon, first-run folder picker.
   *Verify:* portable exe on clean VM plays a video song; second device can queue via LAN page; zip ~5–8 MB.
 
 Post-v1 backlog: playlist persistence, background slideshow, medley preview, singer-name announcements between songs.
@@ -165,3 +165,4 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - 2026-07-03 — Plan written. Corpus audited (deviation list above). Stack chosen: Tauri 2 + TS. No code yet.
 - 2026-07-03 — M0 done (Rust installed, skeleton runs, Vitest green). M1 done (parser, 84 tests, 47-file golden corpus). M2 done and user-verified (audio + syllable-fill lyrics; basic video slave + duet lanes already wired, polish pending in M3/M4).
 - 2026-07-03 — Playback hardening from user testing: autoplay policy disabled via WebView2 args; video hidden until sized; corrupt-ID3 mp3 sanitizer; M3.5 pulled forward — ffmpeg sidecar transcodes undecodable media on demand (Creed "mp3" = MPEG Layer II → lame mp3 at ~147×; avi→mp4 path wired but not yet user-verified). Scan-time background convert still open.
+- 2026-07-03 — M5 library UI (user-verified, incl. cover fallbacks + fixed scroll layout). M6 queue + LAN phone remote (user-verified from phone; tabbed remote UI, no auto-play on add, songs play to natural end, outro skip hint, Esc keeps queue). Display-offset setting for beamer latency. M7: NSIS installer (28.7 MB) + portable zip (40.6 MB) built in dist\, release exe smoke-tested (window + API). Open: M4 duet visual verify, natural song-end chaining verify, clean-VM install test, scan cache, app icon.
