@@ -352,9 +352,6 @@
     padding-bottom: 1rem;
     text-align: center;
   }
-  .remote h2 {
-    text-align: left;
-  }
   .qr {
     display: block;
     border-radius: 8px;
