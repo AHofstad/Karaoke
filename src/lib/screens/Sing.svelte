@@ -452,7 +452,8 @@
     <div class="overlay dim">
       <div class="dialog">
         <h2>QUIT THIS SONG?</h2>
-        <p><kbd>Esc</kbd> quit &nbsp;&nbsp; <kbd>any other key</kbd> keep singing</p>
+        <p><kbd>Esc</kbd> Quit</p>
+        <p><kbd>Any other key</kbd> Keep singing</p>
       </div>
     </div>
   {:else if paused}
@@ -542,7 +543,7 @@
     letter-spacing: 0.04em;
   }
   .dialog p {
-    margin: 0;
+    margin: 0.6rem 0 0;
     font-size: 1.3rem;
     color: #c8cede;
   }
