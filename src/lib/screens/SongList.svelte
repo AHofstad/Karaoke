@@ -350,11 +350,15 @@
     margin-bottom: 1.4rem;
     border-bottom: 1px solid #2a2f45;
     padding-bottom: 1rem;
+    text-align: center;
+  }
+  .remote h2 {
+    text-align: left;
   }
   .qr {
     display: block;
     border-radius: 8px;
-    margin-bottom: 0.5rem;
+    margin: 0 auto 0.5rem;
     background: #fff;
   }
   code {
