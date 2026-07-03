@@ -268,7 +268,7 @@
   }
   .meta {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.4rem;
     padding: 0.55rem 0.55rem 0.7rem 0.7rem;
   }
@@ -278,16 +278,12 @@
   }
   .title {
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .artist {
     color: #9aa3b8;
     font-size: 0.85rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .add {
     flex: none;
@@ -339,14 +335,6 @@
   .qtext {
     flex: 1;
     min-width: 0;
-  }
-  /* Queue entries: full names always readable, wrap instead of ellipsis. */
-  .qtext .title,
-  .qtext .artist {
-    white-space: normal;
-    word-break: break-word;
-    overflow: visible;
-    text-overflow: unset;
   }
   .remove {
     flex: none;
