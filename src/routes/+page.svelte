@@ -1,61 +1,66 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
+  import { onMount } from "svelte";
   import Sing from "$lib/screens/Sing.svelte";
+  import SongList from "$lib/screens/SongList.svelte";
+  import { scanLibrary, type LibraryEntry } from "$lib/library/scanner";
   import { loadSong, type LoadedSong } from "$lib/playback/media";
 
+  const ROOT_KEY = "karaoke.songRoot";
+
+  let entries: LibraryEntry[] = $state([]);
+  let scanning = $state(false);
   let loaded: LoadedSong | null = $state(null);
   let error = $state("");
 
-  async function pickSong() {
+  async function rescan(rootDir: string) {
+    scanning = true;
     error = "";
-    const path = await open({
-      title: "Pick an UltraStar song txt",
-      filters: [{ name: "UltraStar chart", extensions: ["txt"] }],
-    });
-    if (typeof path !== "string") return;
     try {
-      loaded = await loadSong(path);
+      entries = await scanLibrary(rootDir);
+      localStorage.setItem(ROOT_KEY, rootDir);
+    } catch (e) {
+      error = `Scan failed: ${e}`;
+    } finally {
+      scanning = false;
+    }
+  }
+
+  async function pickFolder() {
+    const dir = await open({ title: "Pick your songs folder", directory: true });
+    if (typeof dir === "string") await rescan(dir);
+  }
+
+  async function pick(entry: LibraryEntry) {
+    error = "";
+    try {
+      loaded = await loadSong(entry.txtPath);
     } catch (e) {
       error = String(e);
     }
   }
+
+  onMount(() => {
+    const saved = localStorage.getItem(ROOT_KEY);
+    if (saved) void rescan(saved);
+  });
 </script>
 
 {#if loaded}
   <Sing {loaded} onExit={() => (loaded = null)} />
 {:else}
-  <main>
-    <h1>Karaoke</h1>
-    <button onclick={pickSong}>Open song…</button>
-    {#if error}<p class="error">{error}</p>{/if}
-  </main>
+  <SongList {entries} {scanning} onPick={pick} onChangeFolder={pickFolder} />
+  {#if error}
+    <p class="error">{error}</p>
+  {/if}
 {/if}
 
 <style>
-  main {
-    height: 100vh;
-    display: grid;
-    place-content: center;
-    gap: 1rem;
-    text-align: center;
-    background: #10121a;
-    color: #eee;
-    font-family: "Segoe UI", system-ui, sans-serif;
-  }
-  button {
-    font-size: 1.2rem;
-    padding: 0.6em 1.6em;
-    border-radius: 8px;
-    border: none;
-    background: #37b6ff;
-    color: #062033;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #5cc5ff;
-  }
   .error {
+    position: fixed;
+    bottom: 0.5rem;
+    left: 1.5rem;
     color: #ff7a7a;
-    max-width: 60ch;
+    font-family: "Segoe UI", system-ui, sans-serif;
   }
 </style>
