@@ -12,6 +12,7 @@
   let paused = $state(false);
   let error = $state("");
   let videoFailed = $state(false);
+  let videoReady = $state(false);
 
   // The component is remounted per song, so capturing the initial prop value is intended.
   // svelte-ignore state_referenced_locally
@@ -55,7 +56,7 @@
     const t = nowMs();
 
     // Slave the muted video to the audio clock (M3 refines with VIDEOGAP).
-    if (!videoIsMaster && video && audio && !videoFailed) {
+    if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
       const target = audio.currentTime + timing.videoGapSec;
       if (Math.abs(video.currentTime - target) > 0.15) video.currentTime = target;
       if (audio.paused !== video.paused) {
@@ -135,12 +136,27 @@
     if (!m) return;
     if (timing.startSec) m.currentTime = timing.startSec;
     void m.play().catch((e) => {
-      error = `Could not start playback: ${e}`;
+      // Autoplay can be blocked when too much time passed since the last user
+      // gesture (file dialog browsing). Fall back to the pause overlay.
+      if (e instanceof DOMException && e.name === "NotAllowedError") {
+        paused = true;
+      } else {
+        error = `Could not start playback: ${e}`;
+      }
     });
   }
 
   function onVideoError() {
     videoFailed = true;
+  }
+
+  function onVideoReady() {
+    videoReady = true;
+    if (videoIsMaster) onMediaReady();
+  }
+
+  function onAudioError() {
+    error = `Could not load audio: ${loaded.song.audioFile ?? "unknown file"}`;
   }
 
   onMount(() => {
@@ -156,9 +172,10 @@
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
+      class:ready={videoReady}
       src={loaded.videoUrl}
       muted={!videoIsMaster}
-      onloadedmetadata={() => videoIsMaster && onMediaReady()}
+      onloadedmetadata={onVideoReady}
       onerror={onVideoError}
       onended={() => videoIsMaster && finish()}
     ></video>
@@ -171,6 +188,7 @@
       bind:this={audio}
       src={loaded.audioUrl}
       onloadedmetadata={onMediaReady}
+      onerror={onAudioError}
       onended={finish}
     ></audio>
   {/if}
@@ -206,6 +224,15 @@
     height: 100%;
     object-fit: contain;
     background: #000;
+  }
+  /* Hide the video until its dimensions are known to avoid a brief
+     small top-left flash before layout settles. */
+  video {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  video.ready {
+    opacity: 1;
   }
   .bg {
     object-fit: cover;
