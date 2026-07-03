@@ -16,6 +16,7 @@
   let audio: HTMLAudioElement | undefined = $state();
   let video: HTMLVideoElement | undefined = $state();
   let paused = $state(false);
+  let confirmingQuit = $state(false);
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
@@ -241,6 +242,21 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    // Quit confirmation: second Esc quits, anything else cancels and resumes.
+    if (confirmingQuit) {
+      e.preventDefault();
+      if (e.key === "Escape") {
+        quit();
+      } else {
+        confirmingQuit = false;
+        const m = master();
+        if (m?.paused) {
+          void m.play();
+          paused = false;
+        }
+      }
+      return;
+    }
     switch (e.key) {
       case " ":
         e.preventDefault();
@@ -265,7 +281,8 @@
         finish(); // skip to next in queue
         break;
       case "Escape":
-        quit();
+        confirmingQuit = true;
+        master()?.pause();
         break;
     }
   }
@@ -431,7 +448,14 @@
     onpointercancel={onPointerUp}
   ></canvas>
 
-  {#if paused}
+  {#if confirmingQuit}
+    <div class="overlay">
+      <div class="pause-box">
+        <h2>Quit this song?</h2>
+        <p>Esc: quit &nbsp;·&nbsp; any other key: keep singing</p>
+      </div>
+    </div>
+  {:else if paused}
     <div class="overlay">
       <div class="pause-box">
         <h2>{song.artist} – {song.title}</h2>
