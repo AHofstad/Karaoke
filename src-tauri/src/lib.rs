@@ -1,4 +1,5 @@
 mod remote;
+mod scan;
 
 use std::sync::{Arc, Mutex};
 
@@ -26,6 +27,7 @@ pub fn run() {
             remote::queue_next,
             remote::playing_stopped,
             remote::set_progress,
+            scan::scan_txt_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

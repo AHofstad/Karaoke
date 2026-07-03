@@ -186,6 +186,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - Cards queue on click (no play-now anywhere); no + button; 210 px min card width; titles/artists wrap fully (no ellipsis)
 - Cover fallback chain: #COVER (fuzzy) → `[CO]` image → #BACKGROUND → any image in folder
 - Duplicate charts deduped (same artist + title + length, e.g. backup copies in subfolders)
+- Scan cache for big libraries (7k songs): one Rust call stats every txt (mtime+size), unchanged files come from `%APPDATA%\com.light.karaoke\scan-cache.json`, only new/changed files are parsed (16-way concurrent); non-chart txts cached as misses so they're never re-read
 - Search matches artist, title, creator (#CREATOR/#AUTHOR), tags (#TAGS) and genre (#GENRE); case-, width- (CJK) and diacritic-insensitive
 - Header row fixed above the scrolling grid; sidebar: centered Phone remote (QR + URL) on top, Queue below with pinned "▶ Play queue" (disabled when empty) and a Clear button; sidebar width draggable 220–600 px, persisted
 - F11 fullscreen everywhere
@@ -200,7 +201,6 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 ### Known-open (nice-to-haves, nothing blocking)
 
 - Clean-VM installer test before wide sharing
-- Scan cache (currently full rescan on start — fine at ~50 songs)
 - Linux support assessed and rejected (WebKitGTK codec mess; ~2–3 days if ever wanted)
 - NSIS "Already installed" upgrade page assessed and rejected (custom template, ~1–2 h + maintenance; silent upgrades work via `setup.exe /S`)
 - `Research\songs\songs\` is a manual copy for dedupe testing — excluded from the golden corpus test
