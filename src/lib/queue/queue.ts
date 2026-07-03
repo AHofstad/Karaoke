@@ -9,6 +9,8 @@ export interface RemoteSongWire {
   isDuet: boolean;
   hasVideo: boolean;
   durationMs: number;
+  creator?: string;
+  tags?: string;
   coverPath?: string;
   txtPath: string;
 }
@@ -68,6 +70,8 @@ export async function publishLibrary(entries: LibraryEntry[]): Promise<void> {
     isDuet: e.isDuet,
     hasVideo: e.hasVideo,
     durationMs: e.durationMs,
+    creator: e.creator,
+    tags: e.tags,
     coverPath: coverPathFromUrl(e),
     txtPath: e.txtPath,
   }));

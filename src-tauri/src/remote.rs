@@ -30,6 +30,10 @@ pub struct RemoteSong {
     /// Estimated length for queue ETAs; serialized to guests.
     #[serde(rename = "durationMs", default)]
     pub duration_ms: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creator: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<String>,
     /// Accepted from the desktop frontend, never serialized to guests.
     #[serde(rename = "coverPath", skip_serializing, default)]
     pub cover_path: Option<String>,
@@ -114,7 +118,17 @@ async fn songs(State(ctx): State<ServerCtx>, Query(query): Query<SongsQuery>) ->
     let list = state
         .library
         .iter()
-        .filter(|s| q.is_empty() || normalize(&format!("{} {}", s.artist, s.title)).contains(&q))
+        .filter(|s| {
+            q.is_empty()
+                || normalize(&format!(
+                    "{} {} {} {}",
+                    s.artist,
+                    s.title,
+                    s.creator.as_deref().unwrap_or(""),
+                    s.tags.as_deref().unwrap_or("")
+                ))
+                .contains(&q)
+        })
         .cloned()
         .collect();
     Json(list)

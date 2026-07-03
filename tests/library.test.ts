@@ -37,6 +37,18 @@ describe("filterEntries", () => {
   });
 });
 
+describe("creator and tag search", () => {
+  it("matches on creator", () => {
+    const withCreator = { ...entry("KANA-BOON", "Silhouette"), creator: "Guido Hansen" };
+    expect(filterEntries([withCreator, entry("Creed", "Higher")], "guido")).toHaveLength(1);
+  });
+
+  it("matches on tags/genre", () => {
+    const withTags = { ...entry("Crystal Kay", "Motherland"), tags: "Anime, J-Pop" };
+    expect(filterEntries([withTags, entry("Creed", "Higher")], "anime")).toHaveLength(1);
+  });
+});
+
 describe("dedupeEntries", () => {
   it("drops copies of the same chart in other folders", () => {
     const a = entry("Creed", "Higher");

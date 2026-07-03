@@ -132,7 +132,7 @@
     const list = $("list");
     list.innerHTML = "";
     for (const s of songs) {
-      if (q && !norm(s.artist + " " + s.title).includes(q)) continue;
+      if (q && !norm(s.artist + " " + s.title + " " + (s.creator || "") + " " + (s.tags || "")).includes(q)) continue;
       const div = document.createElement("div");
       div.className = "song";
       const img = document.createElement("img");
