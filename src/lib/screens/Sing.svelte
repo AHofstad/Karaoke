@@ -130,7 +130,7 @@
       });
     } else if (lanes.length === 1) {
       lanes[0].render(ctx, t, w, {
-        centerY: h * 0.82,
+        centerY: h * 0.45,
         colors: SOLO_COLORS,
         baseFontSize,
       });
