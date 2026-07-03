@@ -8,7 +8,7 @@
 use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse};
-use axum::routing::{get, post};
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, SocketAddr};
@@ -74,6 +74,7 @@ pub fn start(app: AppHandle, state: SharedState) {
             .route("/", get(index))
             .route("/api/songs", get(songs))
             .route("/api/queue", get(queue_get).post(queue_post))
+            .route("/api/queue/{uid}", delete(queue_delete))
             .route("/api/skip", post(skip))
             .route("/api/cover/{id}", get(cover))
             .with_state(ctx);
@@ -175,6 +176,16 @@ async fn queue_post(
     let _ = ctx.app.emit("queue-updated", ());
     let _ = ctx.app.emit("queue-added", ());
     Ok(Json(view))
+}
+
+async fn queue_delete(State(ctx): State<ServerCtx>, Path(uid): Path<u64>) -> Json<QueueView> {
+    let view = {
+        let mut state = ctx.state.lock().unwrap();
+        state.queue.retain(|item| item.uid != uid);
+        queue_view(&state)
+    };
+    let _ = ctx.app.emit("queue-updated", ());
+    Json(view)
 }
 
 async fn skip(State(ctx): State<ServerCtx>) -> StatusCode {
