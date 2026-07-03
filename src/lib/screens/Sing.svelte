@@ -97,12 +97,12 @@
       });
     }
 
-    drawHud(ctx, t);
+    drawHud(ctx, t, w, h);
 
     if (endMs !== undefined && t >= endMs) finish();
   }
 
-  function drawHud(ctx: CanvasRenderingContext2D, t: number) {
+  function drawHud(ctx: CanvasRenderingContext2D, t: number, w: number, h: number) {
     const m = master();
     const durationMs = Math.min(
       endMs ?? Number.POSITIVE_INFINITY,
@@ -114,24 +114,27 @@
     const totalSec = Math.ceil(remaining / 1000);
     const text = `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, "0")}`;
 
-    const barX = 16;
-    const barY = 18;
-    const barW = 300;
-    const barH = 16;
+    // Scale with the window: bar is a quarter of the width, height follows.
+    const barX = Math.round(w * 0.012) + 8;
+    const barY = Math.round(h * 0.025) + 8;
+    const barW = Math.max(200, Math.round(w * 0.25));
+    const barH = Math.max(12, Math.round(h * 0.022));
+    const fontSize = Math.max(18, Math.round(barH * 1.35));
     const frac = Math.min(1, t / durationMs);
+    const r = barH / 2;
     ctx.fillStyle = "rgba(0,0,0,0.45)";
-    roundRect(ctx, barX - 2, barY - 2, barW + 4, barH + 4, 9);
+    roundRect(ctx, barX - 2, barY - 2, barW + 4, barH + 4, r + 1);
     ctx.fill();
     ctx.fillStyle = "rgba(255,255,255,0.25)";
-    roundRect(ctx, barX, barY, barW, barH, 8);
+    roundRect(ctx, barX, barY, barW, barH, r);
     ctx.fill();
     if (frac > 0) {
       ctx.fillStyle = "#37b6ff";
-      roundRect(ctx, barX, barY, Math.max(barH, barW * frac), barH, 8);
+      roundRect(ctx, barX, barY, Math.max(barH, barW * frac), barH, r);
       ctx.fill();
     }
 
-    ctx.font = '600 22px "Segoe UI", system-ui, sans-serif';
+    ctx.font = `600 ${fontSize}px "Segoe UI", system-ui, sans-serif`;
     ctx.textBaseline = "middle";
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
