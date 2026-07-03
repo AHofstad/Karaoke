@@ -73,8 +73,9 @@ export class LyricsLane {
       this.drawUpcoming(ctx, nextLayout, width, opts.centerY + opts.baseFontSize * 1.15, opts.colors);
     }
 
-    // Countdown dots when the current phrase is still far away.
-    if (nowMs < current.startMs && current.startMs - nowMs > 1000) {
+    // Countdown dots when the current phrase is still upcoming: one dot per
+    // second, counting down to zero exactly when singing starts.
+    if (nowMs < current.startMs) {
       this.drawCountdown(ctx, current.startMs - nowMs, width, opts);
     }
   }
@@ -165,9 +166,9 @@ export class LyricsLane {
     width: number,
     opts: LaneOptions,
   ): void {
-    if (remainingMs > COUNTDOWN_THRESHOLD_MS) remainingMs = COUNTDOWN_THRESHOLD_MS;
-    const total = 5;
-    const dots = Math.min(total, Math.ceil((remainingMs / COUNTDOWN_THRESHOLD_MS) * total));
+    const total = COUNTDOWN_THRESHOLD_MS / 1000; // one dot per second
+    const dots = Math.min(total, Math.ceil(remainingMs / 1000));
+    if (dots <= 0) return;
     const r = 7;
     const gap = 26;
     const startX = width / 2 - ((total - 1) * gap) / 2;
