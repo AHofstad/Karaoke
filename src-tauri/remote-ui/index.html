@@ -9,15 +9,15 @@
   body {
     font-family: "Segoe UI", system-ui, sans-serif;
     background: #10121a; color: #eee;
-    padding: 0.8rem; padding-bottom: 5rem;
+    padding: 0.8rem; padding-bottom: 4.4rem;
   }
   h1 { font-size: 1.15rem; margin-bottom: 0.6rem; }
+  h2 { font-size: 1rem; margin: 0.3rem 0 0.5rem; }
   input {
     width: 100%; padding: 0.6em 0.9em; font-size: 1rem;
     border-radius: 10px; border: 1px solid #2a2f45;
     background: #1a1e2e; color: #eee; margin-bottom: 0.7rem;
   }
-  .name { margin-bottom: 0.4rem; }
   .song {
     display: flex; align-items: center; gap: 0.7rem;
     padding: 0.45rem; border-radius: 10px; background: #1a1e2e;
@@ -37,14 +37,27 @@
     background: #37b6ff; color: #062033; font-weight: 700; font-size: 0.95rem;
   }
   button:disabled { background: #2a2f45; color: #9aa3b8; }
-  #queuebar {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: #171b29; border-top: 1px solid #2a2f45;
-    padding: 0.6rem 0.8rem; font-size: 0.9rem;
+  #np-card {
+    background: #101d2a; border: 1px solid #37b6ff; border-radius: 10px;
+    padding: 0.7rem 0.9rem; margin-bottom: 0.8rem;
   }
-  #queuebar .row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-  #np { color: #37b6ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #qcount { color: #9aa3b8; flex: none; }
+  #np-card .label { color: #37b6ff; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; }
+  ol { list-style: none; padding: 0; }
+  ol li {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: #1a1e2e; border: 1px solid #2a2f45; border-radius: 10px;
+    padding: 0.55rem 0.7rem; margin-bottom: 0.45rem;
+  }
+  ol li .pos { color: #37b6ff; font-weight: 700; flex: none; width: 1.4em; }
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; display: flex;
+    background: #171b29; border-top: 1px solid #2a2f45;
+  }
+  .tabs button {
+    flex: 1; background: none; color: #9aa3b8; border-radius: 0;
+    padding: 0.85em 0; font-size: 1rem;
+  }
+  .tabs button.active { color: #37b6ff; border-top: 2px solid #37b6ff; }
   .toast {
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: 4.4rem; background: rgba(0,0,0,0.85); color: #ffcf40;
@@ -52,26 +65,32 @@
     pointer-events: none;
   }
   .toast.show { opacity: 1; }
+  .empty { color: #9aa3b8; }
 </style>
 </head>
 <body>
-  <h1>🎤 Karaoke — add songs to the queue</h1>
-  <input id="singer" class="name" placeholder="Your name (shown with the song)" maxlength="40" />
-  <input id="search" type="search" placeholder="Search artist or title…" />
+  <h1>🎤 Karaoke</h1>
 
-  <div id="upnext" style="display:none">
-    <h2 style="font-size:1rem;margin:0.3rem 0 0.4rem">Up next</h2>
-    <ol id="queuelist" style="list-style:decimal inside;padding:0;margin:0 0 0.8rem;color:#c8cede;font-size:0.92rem"></ol>
+  <div id="page-songs">
+    <input id="singer" placeholder="Your name (shown with the song)" maxlength="40" />
+    <input id="search" type="search" placeholder="Search artist or title…" />
+    <div id="list"></div>
   </div>
 
-  <div id="list"></div>
-
-  <div id="queuebar">
-    <div class="row">
-      <span id="np">Nothing playing</span>
-      <span id="qcount"></span>
+  <div id="page-queue" style="display:none">
+    <div id="np-card">
+      <div class="label">NOW PLAYING</div>
+      <div id="np" class="t">Nothing playing</div>
     </div>
+    <h2>Up next</h2>
+    <ol id="queuelist"></ol>
+    <p id="qempty" class="empty">Queue is empty — add songs from the Songs tab.</p>
   </div>
+
+  <nav class="tabs">
+    <button id="tab-songs" class="active">Songs</button>
+    <button id="tab-queue">Queue <span id="qcount"></span></button>
+  </nav>
   <div id="toast" class="toast"></div>
 
 <script>
@@ -81,6 +100,16 @@
   const savedName = localStorage.getItem("karaoke.singer") || "";
   $("singer").value = savedName;
   $("singer").addEventListener("input", () => localStorage.setItem("karaoke.singer", $("singer").value));
+
+  function showTab(which) {
+    $("page-songs").style.display = which === "songs" ? "block" : "none";
+    $("page-queue").style.display = which === "queue" ? "block" : "none";
+    $("tab-songs").classList.toggle("active", which === "songs");
+    $("tab-queue").classList.toggle("active", which === "queue");
+    if (which === "queue") refreshQueue();
+  }
+  $("tab-songs").onclick = () => showTab("songs");
+  $("tab-queue").onclick = () => showTab("queue");
 
   function toast(msg) {
     const t = $("toast");
@@ -137,7 +166,7 @@
       div.append(img, meta, btn);
       list.appendChild(div);
     }
-    if (!list.children.length) list.innerHTML = '<p style="color:#9aa3b8">No songs found.</p>';
+    if (!list.children.length) list.innerHTML = '<p class="empty">No songs found.</p>';
   }
 
   async function loadSongs() {
@@ -151,20 +180,30 @@
     try {
       const q = await (await fetch("/api/queue")).json();
       $("np").textContent = q.nowPlaying
-        ? "Now: " + q.nowPlaying.song.title + (q.nowPlaying.singer ? " — " + q.nowPlaying.singer : "")
+        ? q.nowPlaying.song.title + " — " + (q.nowPlaying.singer || q.nowPlaying.song.artist)
         : "Nothing playing";
-      $("qcount").textContent = q.queue.length + " in queue";
+      $("qcount").textContent = q.queue.length ? "(" + q.queue.length + ")" : "";
 
       const list = $("queuelist");
       list.innerHTML = "";
-      for (const item of q.queue) {
+      q.queue.forEach((item, i) => {
         const li = document.createElement("li");
-        li.style.padding = "0.15rem 0";
-        li.textContent =
-          item.song.title + " — " + (item.singer || item.song.artist);
+        const pos = document.createElement("span");
+        pos.className = "pos";
+        pos.textContent = i + 1;
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const t = document.createElement("div");
+        t.className = "t";
+        t.textContent = item.song.title;
+        const a = document.createElement("div");
+        a.className = "a";
+        a.textContent = item.singer || item.song.artist;
+        meta.append(t, a);
+        li.append(pos, meta);
         list.appendChild(li);
-      }
-      $("upnext").style.display = q.queue.length ? "block" : "none";
+      });
+      $("qempty").style.display = q.queue.length ? "none" : "block";
     } catch { /* server briefly unreachable */ }
   }
 

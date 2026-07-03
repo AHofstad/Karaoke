@@ -11,7 +11,6 @@
     getQueue,
     getRemoteInfo,
     nextInQueue,
-    onQueueAdded,
     onQueueUpdated,
     onRemoteSkip,
     publishLibrary,
@@ -122,11 +121,6 @@
 
     const unsubs: Array<() => void> = [];
     void onQueueUpdated(() => void refreshQueue()).then((u) => unsubs.push(u));
-    // Auto-start only when something is APPENDED while idle — other queue
-    // events (advance, stop, remove) must not restart playback.
-    void onQueueAdded(() => {
-      if (!playing) void playNext();
-    }).then((u) => unsubs.push(u));
     void onRemoteSkip(() => {
       if (playing) void playNext();
     }).then((u) => unsubs.push(u));

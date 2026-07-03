@@ -27,13 +27,11 @@ export function displayPhraseIndex(phrases: TimedPhrase[], nowMs: number): numbe
   return phrases.length;
 }
 
-/** Total ms the media should play, honoring #END and the last note. */
+/**
+ * Explicit early-stop point (#END) in ms, if the chart defines one. Without
+ * it the song plays to the natural end of the audio — outros keep playing
+ * after the last lyric.
+ */
 export function songEndMs(song: ParsedSong): number | undefined {
-  if (song.timing.endMs !== undefined) return song.timing.endMs;
-  let last = 0;
-  for (const voice of song.voices) {
-    const phrase = voice.phrases[voice.phrases.length - 1];
-    if (phrase) last = Math.max(last, msAtBeat(song.timing, phrase.endBeat));
-  }
-  return last > 0 ? last + 3000 : undefined; // small outro margin
+  return song.timing.endMs;
 }
