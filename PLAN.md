@@ -160,9 +160,53 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - `tests/corpus.test.ts` — golden gate for every parser change
 - `src-tauri/tauri.conf.json` — fs scope, asset protocol, build targets
 
+## Current state (read this first in a new session)
+
+**Version 0.4.0 shipped** — `dist\Karaoke_0.4.0_x64-setup.exe` (28.8 MB) + `dist\Karaoke_0.4.0_portable.zip` (40.7 MB). All milestones M0–M7 done. 100 tests green (`npm test`). Release via `.\scripts\release.ps1` (auto-updates the ffmpeg sidecar from gyan.dev each run; works in PowerShell 5.1 and 7). Publisher: "Weebs Software Inc.". App icon from `assets\icon-source.jpg` (rounded corners; regenerate: `npm run tauri icon assets/icon-source.jpg`). Rust edition 2024.
+
+### Features beyond the original plan (all user-requested, all shipped)
+
+**Sing screen**
+- HUD top-left: progress bar (scales with window, click/drag to seek) + zero-padded countdown timer (`04:48`)
+- Display offset for beamer/TV latency: +/− keys, ±50 ms steps, persisted in localStorage, shifts lyrics AND video vs audio
+- Esc = confirmation dialog (pauses; second Esc quits to library, any other key resumes); Tab = skip to next queued
+- Countdown dots: only for silences > 5 s, one dot per second in the final 5 s, hits zero on the first note
+- "Tab: next song" hint next to the HUD after the last lyric while the outro plays
+- Songs play to the natural end of the audio (only explicit #END stops early)
+- Lyrics mid-screen for solo; duets P1 bottom (blue) / P2 middle (pink), no name labels
+- Syllable gap (~14 % font size) so syllable boundaries are visible (Japanese romaji readability)
+- Glyph clip fixes: overhangs (j hooks, italics, descenders) no longer cut by the sung-fill clip
+
+**Playback robustness (all verified against the real corpus)**
+- Autoplay policy disabled via WebView2 browser args (file-dialog delay was voiding the user gesture)
+- Media fallback chain: asset URL → blob (with corrupt-ID3 sanitizer, strips junk before first MPEG frame sync) → ffmpeg transcode cached as `<name>.karaoke.mp3/.mp4` (Creed "mp3s" are MPEG Layer II — Chromium can't decode them; ~147× realtime conversion)
+- Video hidden until metadata loads (kills the small top-left flash); wrong-extension references resolved fuzzily (`papafranku.jpg` → `.jpeg`)
+
+**Library**
+- Cards queue on click (no play-now anywhere); no + button; 210 px min card width; titles/artists wrap fully (no ellipsis)
+- Cover fallback chain: #COVER (fuzzy) → `[CO]` image → #BACKGROUND → any image in folder
+- Duplicate charts deduped (same artist + title + length, e.g. backup copies in subfolders)
+- Search matches artist, title, creator (#CREATOR/#AUTHOR), tags (#TAGS) and genre (#GENRE); case-, width- (CJK) and diacritic-insensitive
+- Header row fixed above the scrolling grid; sidebar: centered Phone remote (QR + URL) on top, Queue below with pinned "▶ Play queue" (disabled when empty) and a Clear button; sidebar width draggable 220–600 px, persisted
+- F11 fullscreen everywhere
+
+**Queue + phone remote**
+- Desktop is the only place playback starts (Play queue); phone adds never auto-play
+- Auto-advance between songs with a 3 s "UP NEXT" intermission listing the queue; Esc there returns to the library, queue intact
+- Start-time ETAs (`+3:00`) on every queue position (intermission + phone), from scan-time duration estimates (last lyric + 15 s) plus the live remaining time the sing screen pushes every 5 s
+- Phone page: Songs/Queue tabs; queue shows now playing, artist — singer, ETA, and × remove buttons (`DELETE /api/queue/:uid`); singer name remembered in the phone's localStorage
+- API: GET /api/songs?q= (searches creator/tags too), GET/POST /api/queue, DELETE /api/queue/:uid, POST /api/skip, GET /api/cover/:id; ids only, no file paths exposed
+
+### Known-open (nice-to-haves, nothing blocking)
+
+- M4 duet two-lane rendering never visually verified (play `Creepy Nuts - Bling-Bang-Bang-Born (TV)`)
+- Clean-VM installer test before wide sharing
+- Scan cache (currently full rescan on start — fine at ~50 songs)
+- Linux support assessed and rejected (WebKitGTK codec mess; ~2–3 days if ever wanted)
+- NSIS "Already installed" upgrade page assessed and rejected (custom template, ~1–2 h + maintenance; silent upgrades work via `setup.exe /S`)
+- `Research\songs\songs\` is a manual copy for dedupe testing — excluded from the golden corpus test
+
 ## Progress log
 
-- 2026-07-03 — Plan written. Corpus audited (deviation list above). Stack chosen: Tauri 2 + TS. No code yet.
-- 2026-07-03 — M0 done (Rust installed, skeleton runs, Vitest green). M1 done (parser, 84 tests, 47-file golden corpus). M2 done and user-verified (audio + syllable-fill lyrics; basic video slave + duet lanes already wired, polish pending in M3/M4).
-- 2026-07-03 — Playback hardening from user testing: autoplay policy disabled via WebView2 args; video hidden until sized; corrupt-ID3 mp3 sanitizer; M3.5 pulled forward — ffmpeg sidecar transcodes undecodable media on demand (Creed "mp3" = MPEG Layer II → lame mp3 at ~147×; avi→mp4 path wired but not yet user-verified). Scan-time background convert still open.
-- 2026-07-03 — M5 library UI (user-verified, incl. cover fallbacks + fixed scroll layout). M6 queue + LAN phone remote (user-verified from phone; tabbed remote UI, no auto-play on add, songs play to natural end, outro skip hint, Esc keeps queue). Display-offset setting for beamer latency. M7: NSIS installer (28.7 MB) + portable zip (40.6 MB) built in dist\, release exe smoke-tested (window + API). Open: M4 duet visual verify, natural song-end chaining verify, clean-VM install test, scan cache, app icon.
+- 2026-07-03 — Plan written; corpus audited; stack chosen (Tauri 2 + TS). M0–M2 built and user-verified same day (parser with 47-file golden corpus, audio + syllable-fill lyrics).
+- 2026-07-03 — Playback hardening from live user testing (autoplay policy, mp3 sanitizer, ffmpeg sidecar transcode = M3.5 pulled forward). M5 library, M6 queue + LAN remote (phone-verified), M7 packaging all landed. Releases 0.1.0 → 0.4.0 shipped through `scripts\release.ps1`. Feature list above grew through ~30 user feedback rounds in the same session.
