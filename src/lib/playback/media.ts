@@ -1,6 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir, readFile } from "@tauri-apps/plugin-fs";
 import { decodeSongText } from "../parser/encoding";
+import { sanitizeMp3 } from "./mp3";
 import type { ParsedSong } from "../parser/types";
 import { isUltraStarChart, parseUltraStar } from "../parser/ultrastar";
 
@@ -67,9 +68,10 @@ const MIME_BY_EXT: Record<string, string> = {
  * revoke the URL when done.
  */
 export async function loadFileAsBlobUrl(dir: string, fileName: string): Promise<string> {
-  const bytes = await readFile(`${dir}\\${fileName}`);
+  let bytes: Uint8Array = await readFile(`${dir}\\${fileName}`);
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
-  const blob = new Blob([bytes], { type: MIME_BY_EXT[ext] ?? "application/octet-stream" });
+  if (ext === "mp3") bytes = sanitizeMp3(bytes);
+  const blob = new Blob([bytes as BlobPart], { type: MIME_BY_EXT[ext] ?? "application/octet-stream" });
   return URL.createObjectURL(blob);
 }
 
