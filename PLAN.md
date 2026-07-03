@@ -89,7 +89,8 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
 - Active syllable: progressive gradient fill by `(now - noteStartMs)/noteDurMs` + slight scale bounce.
 - Note-type styling only: golden = gold fill, freestyle = italic/dim, rap = distinct color. Pitch ignored.
 - Gaps > ~4s between phrases: countdown indicator.
-- **HUD, top-left:** time remaining in the song (mm:ss, counts down) + thin progress bar showing position in the song. Always visible during singing, drawn on the lyrics canvas.
+- **HUD, top-left:** time remaining in the song (mm:ss, counts down) + progress bar (scales with window). Always visible during singing, drawn on the lyrics canvas.
+- **Display offset:** +/- keys during singing shift lyrics/video vs audio in 50 ms steps (persisted) — compensates beamer/TV display latency where audio plays immediately but the image lags.
 
 ### Remote queue (LAN web page)
 
