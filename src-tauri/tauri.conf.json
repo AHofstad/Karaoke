@@ -29,6 +29,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "publisher": "Aron van der Hofstad",
     "externalBin": ["binaries/ffmpeg"],
     "icon": [
       "icons/32x32.png",
