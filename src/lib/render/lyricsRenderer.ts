@@ -138,13 +138,16 @@ export class LyricsLane {
       if (fillFraction > 0) {
         // Only the right edge of the clip is the fill boundary; pad the other
         // sides so glyph overhangs (j's left hook, descenders) aren't cut off.
+        // Once fully sung the right edge stops being a boundary too — italic
+        // and scaled glyphs overhang past the measured width.
         const pad = fontSize * 0.4;
+        const rightPad = fillFraction >= 1 ? pad : 0;
         ctx.save();
         ctx.beginPath();
         ctx.rect(
           x - pad,
           centerY - fontSize * 1.3,
-          pad + box.width * fillFraction,
+          pad + box.width * fillFraction + rightPad,
           fontSize * 2.6,
         );
         ctx.clip();
