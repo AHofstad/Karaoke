@@ -37,4 +37,19 @@ npm run check         # svelte-check
 npm run tauri build   # NSIS installer + release exe
 ```
 
+### Making a release (installer + portable zip)
+
+1. Bump `version` in `src-tauri/tauri.conf.json` (and keep `package.json` / `src-tauri/Cargo.toml` in sync).
+2. Run from the repo root:
+
+```powershell
+.\scripts\release.ps1
+```
+
+This runs `tauri build` and drops both artifacts in `dist\`:
+- `Karaoke_<version>_x64-setup.exe` — NSIS installer (from `src-tauri\target\release\bundle\nsis\`)
+- `Karaoke_<version>_portable.zip` — `karaoke.exe` + `ffmpeg.exe` + README.txt zipped from `src-tauri\target\release\`
+
+The portable exe needs `ffmpeg.exe` next to it (the script includes it); the installer bundles it automatically.
+
 Architecture and milestone plan: see [PLAN.md](PLAN.md).
