@@ -139,23 +139,32 @@
     if (endMs !== undefined && rawT >= endMs) finish();
   }
 
-  function drawHud(ctx: CanvasRenderingContext2D, t: number, w: number, h: number) {
+  // Progress bar hit box (CSS px), updated each frame by drawHud for drag-seek.
+  let barRect = { x: 0, y: 0, w: 0, h: 0 };
+  let draggingBar = false;
+
+  function currentDurationMs(): number {
     const m = master();
-    const durationMs = Math.min(
+    return Math.min(
       endMs ?? Number.POSITIVE_INFINITY,
       m?.duration ? m.duration * 1000 : Number.POSITIVE_INFINITY,
     );
+  }
+
+  function drawHud(ctx: CanvasRenderingContext2D, t: number, w: number, h: number) {
+    const durationMs = currentDurationMs();
     if (!Number.isFinite(durationMs) || durationMs <= 0) return;
 
     const remaining = Math.max(0, durationMs - t);
     const totalSec = Math.ceil(remaining / 1000);
-    const text = `${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, "0")}`;
+    const text = `${String(Math.floor(totalSec / 60)).padStart(2, "0")}:${String(totalSec % 60).padStart(2, "0")}`;
 
     // Scale with the window: bar is a quarter of the width, height follows.
     const barX = Math.round(w * 0.012) + 8;
     const barY = Math.round(h * 0.025) + 8;
     const barW = Math.max(200, Math.round(w * 0.25));
     const barH = Math.max(12, Math.round(h * 0.022));
+    barRect = { x: barX, y: barY, w: barW, h: barH };
     const fontSize = Math.max(18, Math.round(barH * 1.35));
     const frac = Math.min(1, t / durationMs);
     const r = barH / 2;
@@ -260,6 +269,46 @@
         quit();
         break;
     }
+  }
+
+  const BAR_HIT_PAD = 10;
+
+  function barHit(e: PointerEvent): boolean {
+    return (
+      e.offsetX >= barRect.x - BAR_HIT_PAD &&
+      e.offsetX <= barRect.x + barRect.w + BAR_HIT_PAD &&
+      e.offsetY >= barRect.y - BAR_HIT_PAD &&
+      e.offsetY <= barRect.y + barRect.h + BAR_HIT_PAD
+    );
+  }
+
+  function seekToPointer(e: PointerEvent) {
+    const m = master();
+    const durationMs = currentDurationMs();
+    if (!m || !Number.isFinite(durationMs) || durationMs <= 0 || barRect.w === 0) return;
+    const frac = Math.min(1, Math.max(0, (e.offsetX - barRect.x) / barRect.w));
+    m.currentTime = (frac * durationMs) / 1000;
+  }
+
+  function onPointerDown(e: PointerEvent) {
+    if (!barHit(e)) return;
+    draggingBar = true;
+    canvas.setPointerCapture(e.pointerId);
+    seekToPointer(e);
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (draggingBar) {
+      seekToPointer(e);
+    } else {
+      canvas.style.cursor = barHit(e) ? "pointer" : "default";
+    }
+  }
+
+  function onPointerUp(e: PointerEvent) {
+    if (!draggingBar) return;
+    draggingBar = false;
+    canvas.releasePointerCapture(e.pointerId);
   }
 
   function onMediaReady() {
@@ -375,7 +424,13 @@
     ></audio>
   {/if}
 
-  <canvas bind:this={canvas}></canvas>
+  <canvas
+    bind:this={canvas}
+    onpointerdown={onPointerDown}
+    onpointermove={onPointerMove}
+    onpointerup={onPointerUp}
+    onpointercancel={onPointerUp}
+  ></canvas>
 
   {#if paused}
     <div class="overlay">
