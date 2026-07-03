@@ -33,7 +33,7 @@ export async function loadSong(txtPath: string): Promise<LoadedSong> {
   const fileNames = entries.filter((e) => e.isFile).map((e) => e.name);
 
   const resolveName = (name: string | undefined): string | undefined =>
-    name ? findFileCaseInsensitive(fileNames, name) : undefined;
+    name ? findFileFuzzy(fileNames, name) : undefined;
   const toUrl = (actual: string | undefined): string | undefined =>
     actual ? convertFileSrc(`${dir}\\${actual}`) : undefined;
 
@@ -92,6 +92,24 @@ export function describeMediaError(el: HTMLMediaElement): string {
 export function findFileCaseInsensitive(fileNames: string[], wanted: string): string | undefined {
   const target = wanted.trim().toLowerCase();
   return fileNames.find((f) => f.toLowerCase() === target);
+}
+
+/**
+ * Like findFileCaseInsensitive, but when the exact name is missing, accepts a
+ * file with the same base name and a different extension (charts often say
+ * .jpg while the file is .jpeg, etc.).
+ */
+export function findFileFuzzy(fileNames: string[], wanted: string): string | undefined {
+  const exact = findFileCaseInsensitive(fileNames, wanted);
+  if (exact) return exact;
+  const base = stripExtension(wanted.trim().toLowerCase());
+  if (!base) return undefined;
+  return fileNames.find((f) => stripExtension(f.toLowerCase()) === base);
+}
+
+function stripExtension(name: string): string {
+  const i = name.lastIndexOf(".");
+  return i > 0 ? name.slice(0, i) : name;
 }
 
 function dirname(path: string): string {
