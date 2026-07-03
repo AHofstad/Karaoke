@@ -1,0 +1,102 @@
+https://usdx.eu/format/#specs
+
+
+UltraStar TXT Format — Extended Specification
+Based on UltraStar Format v1.1.0 with de-facto UltraStar Deluxe / Play extensions
+
+ENCODING & FILE RULES
+- Plain text file (.txt)
+- UTF-8 encoding without BOM
+- Empty lines are ignored
+
+MANDATORY METADATA (STANDARD)
+#VERSION        Format version (must be 1.1.0)
+#TITLE          Song title shown in song list
+#ARTIST         Performing artist
+#AUDIO / #MP3   Audio file path (MP3 legacy supported)
+#BPM            Beat resolution (BPM * 4)
+
+OPTIONAL METADATA (STANDARD)
+#GAP            Intro offset in milliseconds before first note
+#START          Start position in seconds
+#COVER          Cover image
+#BACKGROUND     Background image
+#VIDEO          Video file
+#VIDEOGAP       Video start offset in ms
+#VOCALS         Separate vocal track
+#INSTRUMENTAL   Instrumental track
+#GENRE          Genre labels
+#TAGS           Arbitrary categorization tags
+#EDITION        Song pack / edition
+#CREATOR        Song author / timer
+#LANGUAGE       Language of lyrics
+#YEAR           Release year
+
+DE-FACTO / EXTENDED METADATA (NON-STANDARD)
+#END                Playback end time (ms)
+#PREVIEWSTART       Preview start time (s)
+#RELATIVE           YES/NO for relative timing
+#CALCMEDLEY         Auto-calc medley (YES/NO)
+#MEDLEYSTARTBEAT    Medley start beat
+#MEDLEYENDBEAT      Medley end beat
+#PROVIDEDBY         Source/provider
+#APP                Editor application name
+#APPVERSION         Editor version
+#SOURCE             Original source reference
+
+NOTES SECTION
+Syntax:
+<NoteType> <StartBeat> <Length> <Pitch> <Text>
+
+NOTE TYPES
+:   Normal
+*   Golden
+F   Freestyle
+R   Rap
+G   Rap Golden
+
+PHRASE END
+- <StartBeat>
+
+PLAYER MARKERS
+P1, P2, P3 ... define active singer tracks
+
+END OF FILE
+E
+
+EXAMPLE: REALISTIC ULTRASTAR TXT FILE (ANNOTATED)
+
+#TITLE:Silhouette (Filthy Frank Anime OP ver)
+#ARTIST:KANA-BOON
+#LANGUAGE:Japanese
+#GENRE:Anime
+#YEAR:2014
+#CREATOR:Guido Hansen
+#EDITION:Guilty pleasures
+#MP3:KANA-BOON - Silhouette (TV).mp3
+#COVER:papafranku.jpg
+#VIDEO:KANA-BOON - Silhouette (TV).mp4
+#BACKGROUND:filthy.png
+#BPM:366.04
+#GAP:14105
+#MEDLEYSTARTBEAT:768
+#MEDLEYENDBEAT:1785
+
+: 0 5 6 I
+: 8 6 2 sse
+: 16 6 4 no
+: 24 2 4 se
+: 28 14 6 ~
+- 52
+...
+* 1744 41 2 ~
+E
+
+This example demonstrates:
+- Typical metadata population (standard + de-facto tags)
+- Realistic BPM with fractional value
+- GAP usage for intro sync
+- Medley beat range definition
+- Mixed normal and golden notes
+- Phrase separators and file terminator
+
