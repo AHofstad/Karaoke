@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { LoadedSong } from "../playback/media";
+  import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
   import { songEndMs, timePhrases } from "../playback/clock";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
@@ -13,6 +13,10 @@
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
+  // svelte-ignore state_referenced_locally
+  let audioSrc = $state(loaded.audioUrl);
+  let triedBlobFallback = false;
+  let blobUrl: string | undefined;
 
   // The component is remounted per song, so capturing the initial prop value is intended.
   // svelte-ignore state_referenced_locally
@@ -156,12 +160,30 @@
   }
 
   function onAudioError() {
-    error = `Could not load audio: ${loaded.song.audioFile ?? "unknown file"}`;
+    const detail = audio ? describeMediaError(audio) : "unknown error";
+    // The asset protocol occasionally fails to stream a file; retry once by
+    // reading the bytes directly and playing from a blob URL.
+    if (!triedBlobFallback && loaded.audioFileName) {
+      triedBlobFallback = true;
+      void loadFileAsBlobUrl(loaded.dir, loaded.audioFileName)
+        .then((url) => {
+          blobUrl = url;
+          audioSrc = url;
+        })
+        .catch((e) => {
+          error = `Could not load audio (${detail}); direct read also failed: ${e}`;
+        });
+      return;
+    }
+    error = `Could not load audio: ${loaded.song.audioFile ?? "unknown file"} (${detail})`;
   }
 
   onMount(() => {
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
   });
 </script>
 
@@ -186,7 +208,7 @@
   {#if loaded.audioUrl}
     <audio
       bind:this={audio}
-      src={loaded.audioUrl}
+      src={audioSrc}
       onloadedmetadata={onMediaReady}
       onerror={onAudioError}
       onended={finish}

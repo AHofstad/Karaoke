@@ -13,6 +13,9 @@ export interface LoadedSong {
   videoUrl?: string;
   coverUrl?: string;
   backgroundUrl?: string;
+  /** Actual on-disk file names (case-corrected), for fallback loading. */
+  audioFileName?: string;
+  videoFileName?: string;
 }
 
 /** Read, decode and parse a chart, and resolve its media files to asset URLs. */
@@ -28,21 +31,59 @@ export async function loadSong(txtPath: string): Promise<LoadedSong> {
   const entries = await readDir(dir);
   const fileNames = entries.filter((e) => e.isFile).map((e) => e.name);
 
-  const resolve = (name: string | undefined): string | undefined => {
-    if (!name) return undefined;
-    const actual = findFileCaseInsensitive(fileNames, name);
-    return actual ? convertFileSrc(`${dir}\\${actual}`) : undefined;
-  };
+  const resolveName = (name: string | undefined): string | undefined =>
+    name ? findFileCaseInsensitive(fileNames, name) : undefined;
+  const toUrl = (actual: string | undefined): string | undefined =>
+    actual ? convertFileSrc(`${dir}\\${actual}`) : undefined;
+
+  const audioFileName = resolveName(song.audioFile);
+  const videoFileName = resolveName(song.videoFile);
 
   return {
     song,
     dir,
     txtPath,
-    audioUrl: resolve(song.audioFile),
-    videoUrl: resolve(song.videoFile),
-    coverUrl: resolve(song.coverFile),
-    backgroundUrl: resolve(song.backgroundFile),
+    audioUrl: toUrl(audioFileName),
+    videoUrl: toUrl(videoFileName),
+    coverUrl: toUrl(resolveName(song.coverFile)),
+    backgroundUrl: toUrl(resolveName(song.backgroundFile)),
+    audioFileName,
+    videoFileName,
   };
+}
+
+const MIME_BY_EXT: Record<string, string> = {
+  mp3: "audio/mpeg",
+  ogg: "audio/ogg",
+  m4a: "audio/mp4",
+  wav: "audio/wav",
+  mp4: "video/mp4",
+  webm: "video/webm",
+};
+
+/**
+ * Fallback loader: read the file through the fs plugin and serve it as a blob
+ * URL. Used when the asset protocol fails to stream a file. Caller must
+ * revoke the URL when done.
+ */
+export async function loadFileAsBlobUrl(dir: string, fileName: string): Promise<string> {
+  const bytes = await readFile(`${dir}\\${fileName}`);
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  const blob = new Blob([bytes], { type: MIME_BY_EXT[ext] ?? "application/octet-stream" });
+  return URL.createObjectURL(blob);
+}
+
+/** Human-readable description of an HTMLMediaElement error. */
+export function describeMediaError(el: HTMLMediaElement): string {
+  const err = el.error;
+  if (!err) return "unknown error";
+  const names: Record<number, string> = {
+    1: "MEDIA_ERR_ABORTED",
+    2: "MEDIA_ERR_NETWORK",
+    3: "MEDIA_ERR_DECODE",
+    4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
+  };
+  return `${names[err.code] ?? `code ${err.code}`}${err.message ? `: ${err.message}` : ""}`;
 }
 
 /** Case-insensitive lookup of a referenced file among the directory's entries. */
