@@ -136,9 +136,17 @@ export class LyricsLane {
       else if (active && noteEnd > noteStart) fillFraction = (nowMs - noteStart) / (noteEnd - noteStart);
 
       if (fillFraction > 0) {
+        // Only the right edge of the clip is the fill boundary; pad the other
+        // sides so glyph overhangs (j's left hook, descenders) aren't cut off.
+        const pad = fontSize * 0.4;
         ctx.save();
         ctx.beginPath();
-        ctx.rect(x, centerY - fontSize, box.width * fillFraction, fontSize * 2);
+        ctx.rect(
+          x - pad,
+          centerY - fontSize * 1.3,
+          pad + box.width * fillFraction,
+          fontSize * 2.6,
+        );
         ctx.clip();
         ctx.fillStyle = isGolden(note) ? colors.golden : colors.sung;
         ctx.fillText(note.text, x, centerY);
