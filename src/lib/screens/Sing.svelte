@@ -449,10 +449,10 @@
   ></canvas>
 
   {#if confirmingQuit}
-    <div class="overlay">
-      <div class="pause-box">
-        <h2>Quit this song?</h2>
-        <p>Esc: quit &nbsp;·&nbsp; any other key: keep singing</p>
+    <div class="overlay dim">
+      <div class="dialog">
+        <h2>QUIT THIS SONG?</h2>
+        <p><kbd>Esc</kbd> quit &nbsp;&nbsp; <kbd>any other key</kbd> keep singing</p>
       </div>
     </div>
   {:else if paused}
@@ -522,6 +522,38 @@
     color: #fff;
     text-align: center;
     font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  .overlay.dim {
+    background: rgba(0, 0, 0, 0.75);
+  }
+  .dialog {
+    background: #171b29;
+    border: 2px solid #37b6ff;
+    border-radius: 16px;
+    padding: 2.5rem 4rem;
+    text-align: center;
+    color: #fff;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    box-shadow: 0 12px 60px rgba(0, 0, 0, 0.6);
+  }
+  .dialog h2 {
+    margin: 0 0 1rem;
+    font-size: 2.4rem;
+    letter-spacing: 0.04em;
+  }
+  .dialog p {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #c8cede;
+  }
+  .dialog kbd {
+    background: #10121a;
+    border: 1px solid #2a2f45;
+    border-radius: 6px;
+    padding: 0.15em 0.55em;
+    font-family: inherit;
+    color: #37b6ff;
+    font-weight: 600;
   }
   .notice {
     position: absolute;
