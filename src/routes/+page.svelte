@@ -11,6 +11,7 @@
     getQueue,
     getRemoteInfo,
     nextInQueue,
+    onQueueAdded,
     onQueueUpdated,
     onRemoteSkip,
     publishLibrary,
@@ -30,6 +31,8 @@
   let remoteInfo: RemoteInfo | null = $state(null);
   let qrDataUrl = $state("");
   let playing = false; // mirror of `loaded` readable inside event callbacks
+  let advancing = false; // guards against concurrent queue advances
+  let playCounter = $state(0); // forces <Sing> remount per played song
 
   async function rescan(rootDir: string) {
     scanning = true;
@@ -63,6 +66,7 @@
     error = "";
     try {
       loaded = await loadSong(entry.txtPath);
+      playCounter++;
       playing = true;
     } catch (e) {
       error = String(e);
@@ -70,10 +74,13 @@
   }
 
   async function playNext() {
+    if (advancing) return;
+    advancing = true;
     try {
       const next = await nextInQueue();
       if (next) {
         loaded = await loadSong(next.txtPath);
+        playCounter++;
         playing = true;
       } else {
         loaded = null;
@@ -83,6 +90,8 @@
       error = String(e);
       loaded = null;
       playing = false;
+    } finally {
+      advancing = false;
     }
   }
 
@@ -112,11 +121,11 @@
     });
 
     const unsubs: Array<() => void> = [];
-    void onQueueUpdated(() => {
-      void refreshQueue().then(() => {
-        // Auto-start when idle and something got queued.
-        if (!playing && queue.queue.length > 0) void playNext();
-      });
+    void onQueueUpdated(() => void refreshQueue()).then((u) => unsubs.push(u));
+    // Auto-start only when something is APPENDED while idle — other queue
+    // events (advance, stop, remove) must not restart playback.
+    void onQueueAdded(() => {
+      if (!playing) void playNext();
     }).then((u) => unsubs.push(u));
     void onRemoteSkip(() => {
       if (playing) void playNext();
@@ -127,7 +136,9 @@
 </script>
 
 {#if loaded}
-  <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
+  {#key playCounter}
+    <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
+  {/key}
 {:else}
   <SongList
     {entries}

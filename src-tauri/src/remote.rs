@@ -164,6 +164,7 @@ async fn queue_post(
         }
     };
     let _ = ctx.app.emit("queue-updated", ());
+    let _ = ctx.app.emit("queue-added", ());
     Ok(Json(view))
 }
 
@@ -274,6 +275,7 @@ pub fn queue_add_local(
         });
     }
     let _ = app.emit("queue-updated", ());
+    let _ = app.emit("queue-added", ());
     Ok(())
 }
 

@@ -58,6 +58,12 @@
   <h1>🎤 Karaoke — add songs to the queue</h1>
   <input id="singer" class="name" placeholder="Your name (shown with the song)" maxlength="40" />
   <input id="search" type="search" placeholder="Search artist or title…" />
+
+  <div id="upnext" style="display:none">
+    <h2 style="font-size:1rem;margin:0.3rem 0 0.4rem">Up next</h2>
+    <ol id="queuelist" style="list-style:decimal inside;padding:0;margin:0 0 0.8rem;color:#c8cede;font-size:0.92rem"></ol>
+  </div>
+
   <div id="list"></div>
 
   <div id="queuebar">
@@ -148,6 +154,17 @@
         ? "Now: " + q.nowPlaying.song.title + (q.nowPlaying.singer ? " — " + q.nowPlaying.singer : "")
         : "Nothing playing";
       $("qcount").textContent = q.queue.length + " in queue";
+
+      const list = $("queuelist");
+      list.innerHTML = "";
+      for (const item of q.queue) {
+        const li = document.createElement("li");
+        li.style.padding = "0.15rem 0";
+        li.textContent =
+          item.song.title + " — " + (item.singer || item.song.artist);
+        list.appendChild(li);
+      }
+      $("upnext").style.display = q.queue.length ? "block" : "none";
     } catch { /* server briefly unreachable */ }
   }
 

@@ -66,6 +66,11 @@ export function onQueueUpdated(cb: () => void): Promise<UnlistenFn> {
   return listen("queue-updated", cb);
 }
 
+/** Fires only when something is appended — the auto-start trigger. */
+export function onQueueAdded(cb: () => void): Promise<UnlistenFn> {
+  return listen("queue-added", cb);
+}
+
 export function onRemoteSkip(cb: () => void): Promise<UnlistenFn> {
   return listen("remote-skip", cb);
 }
