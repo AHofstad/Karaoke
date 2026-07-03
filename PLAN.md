@@ -120,7 +120,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* fresh scan of `Research\songs` converts Creed avis unattended; `Creed - Higher` plays with video; second play instant (cache hit).
 - [ ] **M4 — Duet:** two lanes, per-voice colors, singer names.
   *Verify:* Bling-Bang-Bang-Born shows "Main vocals"/"Adlibss" lanes with independent highlighting; solo songs still single-lane.
-- [ ] **M5 — Library UI:** scan, cover grid, search, screen flow, scan cache.
+- [x] **M5 — Library UI:** *(user-verified; scan cache deferred — full rescan on start is fast at current library size)* scan, cover grid, search, screen flow, scan cache.
   *Verify:* point at `Research\songs`: 47 entries, Roundabout absent, "creepy" → 5 hits, "オトノケ" → found.
 - [x] **M6 — Queue + LAN remote:** *(API + autostart + skip verified over HTTP locally; phone-on-Wi-Fi test pending)* queue engine with auto-advance **and skip** (skip current song mid-play → next in queue, or back to song list if queue empty; keyboard shortcut + on-screen button + `POST /api/skip` from remote page), axum server, remote web page, QR/URL display.
   *Verify:* phone on same Wi-Fi opens page, searches "creed", queues 2 songs; desktop plays them in order; skipping mid-song jumps to next queued song; local + remote adds interleave correctly.

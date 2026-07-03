@@ -1,7 +1,40 @@
-# Tauri + SvelteKit + TypeScript
+# Karaoke
 
-This template should help get you started developing with Tauri, SvelteKit and TypeScript in Vite.
+UltraStar-compatible karaoke player for Windows, in the spirit of Performous / UltraStar Play — playback only (no microphone, no scoring). Plays audio and/or video with bouncing-syllable lyrics, supports duets (P1/P2), a cover-grid song browser with search, a play queue, and a **phone remote**: guests on the same Wi-Fi scan a QR code and queue songs from their phones.
 
-## Recommended IDE Setup
+## For players
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer).
+1. Install with `Karaoke_x.y.z_x64-setup.exe` (or unzip the portable zip anywhere).
+2. Start the app, click **Change song folder…** and pick your UltraStar songs folder.
+3. Click a cover to sing it, or **+** to queue it. **▶ Play queue** starts the queue.
+4. Guests: scan the QR code in the sidebar (same Wi-Fi) to browse and queue from a phone.
+
+First launch may show a Windows Firewall prompt — allow **Private networks**, otherwise phones can't reach the app.
+
+### Keys while singing
+
+| Key | Action |
+| --- | --- |
+| Space | Pause / resume |
+| ← / → | Seek ±5 s |
+| Tab | Skip to next queued song |
+| + / − | Display offset ±50 ms (fix beamer/TV lag; saved) |
+| Esc | Back to the song list (queue stays) |
+
+### Song format notes
+
+Charts are standard UltraStar `.txt` files. The parser is deliberately lenient (comma decimals, missing tags, wrong-case tags, wrong media extensions, `#RELATIVE` mode, rap/golden/freestyle notes). Media the built-in player can't decode (`.avi` video, MPEG Layer II audio posing as mp3) is converted once with the bundled ffmpeg and cached next to the song as `<name>.karaoke.mp3/.mp4`.
+
+## For developers
+
+Prereqs: Node 20+, Rust toolchain (MSVC), and an `ffmpeg.exe` copied to `src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe` (any recent build; not tracked in git).
+
+```powershell
+npm install
+npm run tauri dev     # run the app
+npm test              # parser/unit tests (golden corpus lives in Research\songs)
+npm run check         # svelte-check
+npm run tauri build   # NSIS installer + release exe
+```
+
+Architecture and milestone plan: see [PLAN.md](PLAN.md).
