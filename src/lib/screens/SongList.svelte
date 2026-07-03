@@ -76,6 +76,15 @@
   </main>
 
   <aside>
+    {#if remoteUrl}
+      <div class="remote">
+        <h2>Phone remote</h2>
+        {#if qrDataUrl}<img class="qr" src={qrDataUrl} alt="QR code" />{/if}
+        <code>{remoteUrl}</code>
+        <p class="status">Guests on the same Wi-Fi can browse and queue songs.</p>
+      </div>
+    {/if}
+
     <h2>Queue</h2>
     {#if queue.length === 0}
       <p class="status">Empty. Click + on a song, or scan the QR with your phone.</p>
@@ -94,15 +103,6 @@
         {/each}
       </ol>
       <button class="play" onclick={onPlayNext}>▶ Play queue</button>
-    {/if}
-
-    {#if remoteUrl}
-      <div class="remote">
-        <h2>Phone remote</h2>
-        {#if qrDataUrl}<img class="qr" src={qrDataUrl} alt="QR code" />{/if}
-        <code>{remoteUrl}</code>
-        <p class="status">Guests on the same Wi-Fi can browse and queue songs.</p>
-      </div>
     {/if}
   </aside>
 </div>
@@ -323,9 +323,9 @@
     cursor: pointer;
   }
   .remote {
-    margin-top: 1.4rem;
-    border-top: 1px solid #2a2f45;
-    padding-top: 1rem;
+    margin-bottom: 1.4rem;
+    border-bottom: 1px solid #2a2f45;
+    padding-bottom: 1rem;
   }
   .qr {
     display: block;
