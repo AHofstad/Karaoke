@@ -163,3 +163,4 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 
 - 2026-07-03 — Plan written. Corpus audited (deviation list above). Stack chosen: Tauri 2 + TS. No code yet.
 - 2026-07-03 — M0 done (Rust installed, skeleton runs, Vitest green). M1 done (parser, 84 tests, 47-file golden corpus). M2 done and user-verified (audio + syllable-fill lyrics; basic video slave + duet lanes already wired, polish pending in M3/M4).
+- 2026-07-03 — Playback hardening from user testing: autoplay policy disabled via WebView2 args; video hidden until sized; corrupt-ID3 mp3 sanitizer; M3.5 pulled forward — ffmpeg sidecar transcodes undecodable media on demand (Creed "mp3" = MPEG Layer II → lame mp3 at ~147×; avi→mp4 path wired but not yet user-verified). Scan-time background convert still open.
