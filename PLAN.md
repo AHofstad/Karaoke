@@ -118,7 +118,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* BLACKPINK mp3+mp4 lipsync; Matsumoto Bon Bon (`#MP4`, `23.5\t` gap); `Creed - Higher` avi → jpg fallback; Creepy Nuts webm audio.
 - [ ] **M3.5 — AVI auto-transcode:** detect `.avi` video → automatic background convert via bundled ffmpeg sidecar (`-c:v libx264 -preset veryfast -crf 20` → mp4 cached next to song; try hw encoder first, CPU fallback). Kicks off during library scan and again on queue if missing; "preparing video…" spinner + image fallback only if playback starts before convert finishes. SD avi ≈ 15-30 s on modern CPU, <10 s with NVENC/QuickSync.
   *Verify:* fresh scan of `Research\songs` converts Creed avis unattended; `Creed - Higher` plays with video; second play instant (cache hit).
-- [ ] **M4 — Duet:** two lanes, per-voice colors, singer names.
+- [x] **M4 — Duet:** two lanes, per-voice colors, singer names.
   *Verify:* Bling-Bang-Bang-Born shows "Main vocals"/"Adlibss" lanes with independent highlighting; solo songs still single-lane.
 - [x] **M5 — Library UI:** *(user-verified; scan cache deferred — full rescan on start is fast at current library size)* scan, cover grid, search, screen flow, scan cache.
   *Verify:* point at `Research\songs`: 47 entries, Roundabout absent, "creepy" → 5 hits, "オトノケ" → found.
@@ -199,7 +199,6 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 
 ### Known-open (nice-to-haves, nothing blocking)
 
-- M4 duet two-lane rendering never visually verified (play `Creepy Nuts - Bling-Bang-Bang-Born (TV)`)
 - Clean-VM installer test before wide sharing
 - Scan cache (currently full rescan on start — fine at ~50 songs)
 - Linux support assessed and rejected (WebKitGTK codec mess; ~2–3 days if ever wanted)

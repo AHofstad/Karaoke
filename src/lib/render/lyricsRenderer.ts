@@ -36,9 +36,11 @@ export interface LaneOptions {
 }
 
 const NEXT_LINE_SCALE = 0.6;
+/** Upcoming text appears this long before it must be sung... */
+const TEXT_LOOKAHEAD_MS = 10000;
 /** Countdown shows only for silences longer than this... */
 const COUNTDOWN_MIN_GAP_MS = 5000;
-/** ...and only within this window before the next phrase. */
+/** ...and only within this window before the next phrase (after the text). */
 const COUNTDOWN_WINDOW_MS = 5000;
 
 interface LayoutCacheEntry {
@@ -63,6 +65,9 @@ export class LyricsLane {
 
     const maxWidth = width * 0.92;
     const current = this.phrases[idx];
+    // During long instrumental sections the lane stays empty; text shows up
+    // only 10 seconds ahead, the countdown dots 5 seconds ahead.
+    if (nowMs < current.startMs - TEXT_LOOKAHEAD_MS) return;
     const layout = this.layoutFor(idx, ctx, maxWidth, opts.baseFontSize, false);
 
     this.drawPhrase(ctx, current, layout, nowMs, width, opts.centerY, opts.colors);
