@@ -52,6 +52,8 @@
   ol li .eta { color: #ffcf40; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
   ol li .rm { flex: none; background: none; border: none; color: #9aa3b8; font-size: 1.3rem; padding: 0 0.3rem; }
   ol li .rm:active { color: #ff7a7a; }
+  /* Queue entries wrap so full names stay readable */
+  ol li .t, ol li .a { white-space: normal; word-break: break-word; overflow: visible; text-overflow: unset; }
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex;
     background: #171b29; border-top: 1px solid #2a2f45;
@@ -204,7 +206,7 @@
         t.textContent = item.song.title;
         const a = document.createElement("div");
         a.className = "a";
-        a.textContent = item.singer || item.song.artist;
+        a.textContent = item.song.artist + (item.singer ? " — " + item.singer : "");
         meta.append(t, a);
         const eta = document.createElement("span");
         eta.className = "eta";

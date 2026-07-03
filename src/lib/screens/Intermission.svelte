@@ -14,7 +14,7 @@
         <span class="pos">{i + 1}</span>
         <span class="text">
           <span class="title">{item.song.title}</span>
-          <span class="artist">{item.singer || item.song.artist}</span>
+          <span class="artist">{item.song.artist}{item.singer ? ` — ${item.singer}` : ""}</span>
         </span>
         {#if i > 0}<span class="eta">{formatEta(etas[i])}</span>{/if}
       </li>
@@ -81,16 +81,12 @@
   }
   .title {
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .artist {
     color: #9aa3b8;
     font-size: 0.9em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .eta {
     flex: none;

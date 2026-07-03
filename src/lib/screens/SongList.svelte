@@ -27,9 +27,34 @@
 
   let query = $state("");
   const filtered = $derived(filterEntries(entries, query));
+
+  // Resizable queue sidebar (drag the divider), persisted.
+  const WIDTH_KEY = "karaoke.sidebarWidth";
+  let sidebarWidth = $state(clampWidth(Number(localStorage.getItem(WIDTH_KEY)) || 280));
+  let resizing = false;
+
+  function clampWidth(w: number): number {
+    return Math.min(600, Math.max(220, w));
+  }
+
+  function startResize(e: PointerEvent) {
+    resizing = true;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onResize(e: PointerEvent) {
+    if (!resizing) return;
+    sidebarWidth = clampWidth(window.innerWidth - e.clientX);
+  }
+
+  function endResize() {
+    if (!resizing) return;
+    resizing = false;
+    localStorage.setItem(WIDTH_KEY, String(sidebarWidth));
+  }
 </script>
 
-<div class="layout">
+<div class="layout" style="grid-template-columns: 1fr 6px {sidebarWidth}px">
   <main>
     <header>
       <h1>Karaoke</h1>
@@ -73,6 +98,15 @@
     </div>
   </main>
 
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="divider"
+    onpointerdown={startResize}
+    onpointermove={onResize}
+    onpointerup={endResize}
+    onpointercancel={endResize}
+  ></div>
+
   <aside>
     {#if remoteUrl}
       <div class="remote">
@@ -108,7 +142,6 @@
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 1fr 280px;
     height: 100vh;
     overflow: hidden;
     background: #10121a;
@@ -272,11 +305,19 @@
     border-color: #37b6ff;
     background: #101d2a;
   }
+  .divider {
+    cursor: col-resize;
+    background: #2a2f45;
+    touch-action: none;
+  }
+  .divider:hover {
+    background: #37b6ff;
+  }
   aside {
-    border-left: 1px solid #2a2f45;
     padding: 1.4rem 1rem;
     background: #12151f;
     overflow-y: auto;
+    min-width: 0;
   }
   ol {
     list-style: none;
@@ -298,6 +339,14 @@
   .qtext {
     flex: 1;
     min-width: 0;
+  }
+  /* Queue entries: full names always readable, wrap instead of ellipsis. */
+  .qtext .title,
+  .qtext .artist {
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: unset;
   }
   .remove {
     flex: none;
