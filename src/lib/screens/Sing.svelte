@@ -114,18 +114,15 @@
 
     const baseFontSize = Math.max(24, Math.round(h / 14));
     if (lanes.length > 1) {
-      // P1 bottom, P2 mid-screen. Singer names shown only when the chart
-      // provides them (#DUETSINGERPn), no P1/P2 fallback labels.
+      // P1 bottom, P2 mid-screen; voices distinguished by color only.
       lanes[0].render(ctx, t, w, {
         centerY: h * 0.82,
         colors: SOLO_COLORS,
-        name: song.voices[0].name,
         baseFontSize,
       });
       lanes[1].render(ctx, t, w, {
         centerY: h * 0.45,
         colors: DUET_P2_COLORS,
-        name: song.voices[1].name,
         baseFontSize,
       });
     } else if (lanes.length === 1) {

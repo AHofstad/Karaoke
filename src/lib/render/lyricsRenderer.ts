@@ -32,8 +32,6 @@ export interface LaneOptions {
   /** Vertical center of the current line, in px. */
   centerY: number;
   colors: LaneColors;
-  /** Singer name shown at the lane edge (duets). */
-  name?: string;
   baseFontSize: number;
 }
 
@@ -67,7 +65,6 @@ export class LyricsLane {
     const current = this.phrases[idx];
     const layout = this.layoutFor(idx, ctx, maxWidth, opts.baseFontSize, false);
 
-    if (opts.name) this.drawName(ctx, opts);
     this.drawPhrase(ctx, current, layout, nowMs, width, opts.centerY, opts.colors);
 
     const next = this.phrases[idx + 1];
@@ -188,13 +185,6 @@ export class LyricsLane {
       ctx.fillStyle = opts.colors.sung;
       ctx.fill();
     }
-  }
-
-  private drawName(ctx: CanvasRenderingContext2D, opts: LaneOptions): void {
-    ctx.font = lyricFont(Math.round(opts.baseFontSize * 0.4));
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = opts.colors.sung;
-    ctx.fillText(opts.name!, 16, opts.centerY - opts.baseFontSize);
   }
 }
 
