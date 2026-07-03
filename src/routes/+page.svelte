@@ -62,17 +62,6 @@
     }
   }
 
-  async function playEntry(entry: LibraryEntry) {
-    error = "";
-    try {
-      loaded = await loadSong(entry.txtPath);
-      playCounter++;
-      playing = true;
-    } catch (e) {
-      error = String(e);
-    }
-  }
-
   async function playNext() {
     if (advancing) return;
     advancing = true;
@@ -155,7 +144,6 @@
     queue={queue.queue}
     remoteUrl={remoteInfo?.url ?? null}
     {qrDataUrl}
-    onPick={playEntry}
     onQueueAdd={queueAdd}
     onQueueRemove={(uid) => void removeFromQueue(uid)}
     onPlayNext={() => void playNext()}

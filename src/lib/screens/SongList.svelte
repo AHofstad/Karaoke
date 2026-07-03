@@ -8,7 +8,6 @@
     queue,
     remoteUrl,
     qrDataUrl,
-    onPick,
     onQueueAdd,
     onQueueRemove,
     onPlayNext,
@@ -19,7 +18,6 @@
     queue: QueueItem[];
     remoteUrl: string | null;
     qrDataUrl: string;
-    onPick: (entry: LibraryEntry) => void;
     onQueueAdd: (entry: LibraryEntry) => void;
     onQueueRemove: (uid: number) => void;
     onPlayNext: () => void;
@@ -51,7 +49,7 @@
       <div class="grid">
         {#each filtered as entry (entry.txtPath)}
         <div class="card">
-          <button class="cover" onclick={() => onPick(entry)} title="Play now">
+          <button class="cover" onclick={() => onQueueAdd(entry)} title="Add to queue">
             {#if entry.coverUrl}
               <img src={entry.coverUrl} alt="" loading="lazy" />
             {:else}
@@ -86,8 +84,9 @@
     {/if}
 
     <h2>Queue</h2>
+    <button class="play" onclick={onPlayNext} disabled={queue.length === 0}>▶ Play queue</button>
     {#if queue.length === 0}
-      <p class="status">Empty. Click + on a song, or scan the QR with your phone.</p>
+      <p class="status">Empty. Click a song to add it, or scan the QR with your phone.</p>
     {:else}
       <ol>
         {#each queue as item (item.uid)}
@@ -102,7 +101,6 @@
           </li>
         {/each}
       </ol>
-      <button class="play" onclick={onPlayNext}>▶ Play queue</button>
     {/if}
   </aside>
 </div>
@@ -321,6 +319,12 @@
     color: #062033;
     font-weight: 700;
     cursor: pointer;
+    margin-bottom: 0.8rem;
+  }
+  .play:disabled {
+    background: #2a2f45;
+    color: #9aa3b8;
+    cursor: default;
   }
   .remote {
     margin-bottom: 1.4rem;
