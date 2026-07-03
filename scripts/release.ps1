@@ -1,17 +1,34 @@
 # Builds the NSIS installer and the portable zip into dist\.
-# Usage: .\scripts\release.ps1 [-UpdateFfmpeg]
-#   -UpdateFfmpeg: re-download the latest ffmpeg even if one is already present
-param([switch]$UpdateFfmpeg)
+# Usage: .\scripts\release.ps1   (run from the repo root)
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
-# ffmpeg sidecar: downloaded on first run (latest gyan.dev release-essentials
-# build), refreshed with -UpdateFfmpeg.
+# ffmpeg sidecar: always kept at the latest gyan.dev release build. Each run
+# compares the installed version against the published one and re-downloads
+# when they differ; network failure keeps the existing binary.
 $ffmpegSidecar = "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe"
-if ($UpdateFfmpeg -or -not (Test-Path $ffmpegSidecar)) {
-    Write-Host "Downloading latest ffmpeg (release-essentials)..." -ForegroundColor Cyan
+
+function Get-InstalledFfmpegVersion {
+    if (-not (Test-Path $ffmpegSidecar)) { return $null }
+    $line = (& $ffmpegSidecar -version 2>$null | Select-Object -First 1)
+    if ($line -match "ffmpeg version (\d+[^\s-]*)") { return $Matches[1] }
+    return $null
+}
+
+$installed = Get-InstalledFfmpegVersion
+$latest = $null
+try {
+    $resp = (Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/release-version" -TimeoutSec 15 -UseBasicParsing).Content
+    # Server sends application/octet-stream, so Content may be a byte array.
+    $latest = if ($resp -is [byte[]]) { [System.Text.Encoding]::UTF8.GetString($resp).Trim() } else { "$resp".Trim() }
+} catch {
+    Write-Warning "Could not check the latest ffmpeg version ($($_.Exception.Message))"
+}
+
+if ($latest -and $installed -ne $latest) {
+    Write-Host "Updating ffmpeg $($installed ?? '(none)') -> $latest..." -ForegroundColor Cyan
     $zip = Join-Path $env:TEMP "ffmpeg-release-essentials.zip"
     $extract = Join-Path $env:TEMP "ffmpeg-release-essentials"
     Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $zip
@@ -22,7 +39,11 @@ if ($UpdateFfmpeg -or -not (Test-Path $ffmpegSidecar)) {
     New-Item -ItemType Directory -Force (Split-Path $ffmpegSidecar) | Out-Null
     Copy-Item $exe.FullName $ffmpegSidecar -Force
     Remove-Item $zip, $extract -Recurse -Force
-    & $ffmpegSidecar -version | Select-Object -First 1
+} elseif ($installed) {
+    Write-Host "ffmpeg $installed is up to date" -ForegroundColor Green
+}
+if (-not (Test-Path $ffmpegSidecar)) {
+    throw "No ffmpeg sidecar and download failed - cannot build"
 }
 
 $version = (Get-Content src-tauri\tauri.conf.json | ConvertFrom-Json).version

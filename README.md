@@ -27,7 +27,7 @@ Charts are standard UltraStar `.txt` files. The parser is deliberately lenient (
 
 ## For developers
 
-Prereqs: Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded automatically by the release script; for `tauri dev` transcode testing, run `.\scripts\release.ps1 -UpdateFfmpeg` once or copy any ffmpeg.exe there manually.
+Prereqs: Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded/updated automatically by the release script; for `tauri dev` transcode testing before the first release build, copy any ffmpeg.exe there manually or run the release script once.
 
 ```powershell
 npm install
@@ -52,6 +52,6 @@ This runs `tauri build` and drops both artifacts in `dist\`:
 
 The portable exe needs `ffmpeg.exe` next to it (the script includes it); the installer bundles it automatically.
 
-The script downloads the latest ffmpeg (gyan.dev release-essentials) on first run; pass `-UpdateFfmpeg` to refresh it.
+The script checks gyan.dev for the latest ffmpeg release on every run and updates the sidecar automatically when a newer version exists (keeps the current one if offline).
 
 Architecture and milestone plan: see [PLAN.md](PLAN.md).
