@@ -109,7 +109,8 @@
   .layout {
     display: grid;
     grid-template-columns: 1fr 280px;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background: #10121a;
     color: #eee;
     font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
@@ -117,6 +118,7 @@
   main {
     padding: 1rem 1.5rem 2rem;
     min-width: 0;
+    overflow-y: auto;
   }
   header {
     display: flex;
@@ -270,6 +272,7 @@
     border-left: 1px solid #2a2f45;
     padding: 1.4rem 1rem;
     background: #12151f;
+    overflow-y: auto;
   }
   ol {
     list-style: none;
