@@ -27,7 +27,7 @@ Charts are standard UltraStar `.txt` files. The parser is deliberately lenient (
 
 ## For developers
 
-Prereqs: Node 20+, Rust toolchain (MSVC), and an `ffmpeg.exe` copied to `src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe` (any recent build; not tracked in git).
+Prereqs: Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded automatically by the release script; for `tauri dev` transcode testing, run `.\scripts\release.ps1 -UpdateFfmpeg` once or copy any ffmpeg.exe there manually.
 
 ```powershell
 npm install
@@ -51,5 +51,7 @@ This runs `tauri build` and drops both artifacts in `dist\`:
 - `Karaoke_<version>_portable.zip` — `karaoke.exe` + `ffmpeg.exe` + README.txt zipped from `src-tauri\target\release\`
 
 The portable exe needs `ffmpeg.exe` next to it (the script includes it); the installer bundles it automatically.
+
+The script downloads the latest ffmpeg (gyan.dev release-essentials) on first run; pass `-UpdateFfmpeg` to refresh it.
 
 Architecture and milestone plan: see [PLAN.md](PLAN.md).

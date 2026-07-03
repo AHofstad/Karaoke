@@ -1,12 +1,28 @@
 # Builds the NSIS installer and the portable zip into dist\.
-# Usage: .\scripts\release.ps1   (run from the repo root)
+# Usage: .\scripts\release.ps1 [-UpdateFfmpeg]
+#   -UpdateFfmpeg: re-download the latest ffmpeg even if one is already present
+param([switch]$UpdateFfmpeg)
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
 
-if (-not (Test-Path "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe")) {
-    throw "Missing src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe - download an ffmpeg build (e.g. gyan.dev essentials) and copy ffmpeg.exe there under that name."
+# ffmpeg sidecar: downloaded on first run (latest gyan.dev release-essentials
+# build), refreshed with -UpdateFfmpeg.
+$ffmpegSidecar = "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe"
+if ($UpdateFfmpeg -or -not (Test-Path $ffmpegSidecar)) {
+    Write-Host "Downloading latest ffmpeg (release-essentials)..." -ForegroundColor Cyan
+    $zip = Join-Path $env:TEMP "ffmpeg-release-essentials.zip"
+    $extract = Join-Path $env:TEMP "ffmpeg-release-essentials"
+    Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $zip
+    if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
+    Expand-Archive $zip -DestinationPath $extract
+    $exe = Get-ChildItem $extract -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+    if (-not $exe) { throw "ffmpeg.exe not found in downloaded archive" }
+    New-Item -ItemType Directory -Force (Split-Path $ffmpegSidecar) | Out-Null
+    Copy-Item $exe.FullName $ffmpegSidecar -Force
+    Remove-Item $zip, $extract -Recurse -Force
+    & $ffmpegSidecar -version | Select-Object -First 1
 }
 
 $version = (Get-Content src-tauri\tauri.conf.json | ConvertFrom-Json).version
