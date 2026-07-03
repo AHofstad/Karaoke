@@ -89,6 +89,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
 - Active syllable: progressive gradient fill by `(now - noteStartMs)/noteDurMs` + slight scale bounce.
 - Note-type styling only: golden = gold fill, freestyle = italic/dim, rap = distinct color. Pitch ignored.
 - Gaps > ~4s between phrases: countdown indicator.
+- **HUD, top-left:** time remaining in the song (mm:ss, counts down) + thin progress bar showing position in the song. Always visible during singing, drawn on the lyrics canvas.
 
 ### Remote queue (LAN web page)
 
@@ -110,6 +111,8 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* all 47 corpus files parse without throwing; snapshot per file; targeted asserts (see Testing); Roundabout classified non-UltraStar.
 - [x] **M2 — Audio + solo lyrics:** SongClock, `<audio>` playback, canvas renderer, pause/seek/quit.
   *Verify:* Proud Mary end-to-end; `Crystal King - Ai wo torimodose!!` (CJK render); `Creed - My sacrifice` (comma BPM) in sync.
+- [ ] **M2.5 — Sing HUD:** top-left remaining time (mm:ss countdown) + progress bar.
+  *Verify:* play any song: timer counts down to 0:00 at song end; bar fills left→right; seeking updates both instantly.
 - [ ] **M3 — Video:** sync, VIDEOGAP normalize, `#MP4` alias, avi fallback, START/END.
   *Verify:* BLACKPINK mp3+mp4 lipsync; Matsumoto Bon Bon (`#MP4`, `23.5\t` gap); `Creed - Higher` avi → jpg fallback; Creepy Nuts webm audio.
 - [ ] **M3.5 — AVI auto-transcode:** detect `.avi` video → automatic background convert via bundled ffmpeg sidecar (`-c:v libx264 -preset veryfast -crf 20` → mp4 cached next to song; try hw encoder first, CPU fallback). Kicks off during library scan and again on queue if missing; "preparing video…" spinner + image fallback only if playback starts before convert finishes. SD avi ≈ 15-30 s on modern CPU, <10 s with NVENC/QuickSync.
