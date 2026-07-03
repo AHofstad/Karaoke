@@ -97,7 +97,56 @@
       });
     }
 
+    drawHud(ctx, t);
+
     if (endMs !== undefined && t >= endMs) finish();
+  }
+
+  function drawHud(ctx: CanvasRenderingContext2D, t: number) {
+    const m = master();
+    const durationMs = Math.min(
+      endMs ?? Number.POSITIVE_INFINITY,
+      m?.duration ? m.duration * 1000 : Number.POSITIVE_INFINITY,
+    );
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return;
+
+    const remaining = Math.max(0, durationMs - t);
+    const totalSec = Math.ceil(remaining / 1000);
+    const text = `-${Math.floor(totalSec / 60)}:${String(totalSec % 60).padStart(2, "0")}`;
+
+    ctx.font = '600 20px "Segoe UI", system-ui, sans-serif';
+    ctx.textBaseline = "top";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.strokeText(text, 16, 14);
+    ctx.fillStyle = "#e8e8e8";
+    ctx.fillText(text, 16, 14);
+
+    const barX = 16;
+    const barY = 42;
+    const barW = 180;
+    const barH = 6;
+    const frac = Math.min(1, t / durationMs);
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    roundRect(ctx, barX, barY, barW, barH, 3);
+    ctx.fill();
+    if (frac > 0) {
+      ctx.fillStyle = "#37b6ff";
+      roundRect(ctx, barX, barY, Math.max(barH, barW * frac), barH, 3);
+      ctx.fill();
+    }
+  }
+
+  function roundRect(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    r: number,
+  ) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
   }
 
   function finish() {

@@ -111,7 +111,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* all 47 corpus files parse without throwing; snapshot per file; targeted asserts (see Testing); Roundabout classified non-UltraStar.
 - [x] **M2 — Audio + solo lyrics:** SongClock, `<audio>` playback, canvas renderer, pause/seek/quit.
   *Verify:* Proud Mary end-to-end; `Crystal King - Ai wo torimodose!!` (CJK render); `Creed - My sacrifice` (comma BPM) in sync.
-- [ ] **M2.5 — Sing HUD:** top-left remaining time (mm:ss countdown) + progress bar.
+- [x] **M2.5 — Sing HUD:** top-left remaining time (mm:ss countdown) + progress bar.
   *Verify:* play any song: timer counts down to 0:00 at song end; bar fills left→right; seeking updates both instantly.
 - [ ] **M3 — Video:** sync, VIDEOGAP normalize, `#MP4` alias, avi fallback, START/END.
   *Verify:* BLACKPINK mp3+mp4 lipsync; Matsumoto Bon Bon (`#MP4`, `23.5\t` gap); `Creed - Higher` avi → jpg fallback; Creepy Nuts webm audio.
