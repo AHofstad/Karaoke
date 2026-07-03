@@ -108,7 +108,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* `npm run tauri dev` opens window; dummy test green.
 - [x] **M1 — Parser + golden tests:** full lenient parser (all rules above, RELATIVE mode, duet P-markers).
   *Verify:* all 47 corpus files parse without throwing; snapshot per file; targeted asserts (see Testing); Roundabout classified non-UltraStar.
-- [ ] **M2 — Audio + solo lyrics:** SongClock, `<audio>` playback, canvas renderer, pause/seek/quit.
+- [x] **M2 — Audio + solo lyrics:** SongClock, `<audio>` playback, canvas renderer, pause/seek/quit.
   *Verify:* Proud Mary end-to-end; `Crystal King - Ai wo torimodose!!` (CJK render); `Creed - My sacrifice` (comma BPM) in sync.
 - [ ] **M3 — Video:** sync, VIDEOGAP normalize, `#MP4` alias, avi fallback, START/END.
   *Verify:* BLACKPINK mp3+mp4 lipsync; Matsumoto Bon Bon (`#MP4`, `23.5\t` gap); `Creed - Higher` avi → jpg fallback; Creepy Nuts webm audio.
@@ -159,3 +159,4 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 ## Progress log
 
 - 2026-07-03 — Plan written. Corpus audited (deviation list above). Stack chosen: Tauri 2 + TS. No code yet.
+- 2026-07-03 — M0 done (Rust installed, skeleton runs, Vitest green). M1 done (parser, 84 tests, 47-file golden corpus). M2 done and user-verified (audio + syllable-fill lyrics; basic video slave + duet lanes already wired, polish pending in M3/M4).
