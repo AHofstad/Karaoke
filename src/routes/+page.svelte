@@ -1,10 +1,24 @@
 <script lang="ts">
   import { open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
+  import QRCode from "qrcode";
   import Sing from "$lib/screens/Sing.svelte";
   import SongList from "$lib/screens/SongList.svelte";
   import { scanLibrary, type LibraryEntry } from "$lib/library/scanner";
   import { loadSong, type LoadedSong } from "$lib/playback/media";
+  import {
+    addToQueue,
+    getQueue,
+    getRemoteInfo,
+    nextInQueue,
+    onQueueUpdated,
+    onRemoteSkip,
+    publishLibrary,
+    removeFromQueue,
+    reportStopped,
+    type QueueSnapshot,
+    type RemoteInfo,
+  } from "$lib/queue/queue";
 
   const ROOT_KEY = "karaoke.songRoot";
 
@@ -12,6 +26,10 @@
   let scanning = $state(false);
   let loaded: LoadedSong | null = $state(null);
   let error = $state("");
+  let queue: QueueSnapshot = $state({ nowPlaying: null, queue: [] });
+  let remoteInfo: RemoteInfo | null = $state(null);
+  let qrDataUrl = $state("");
+  let playing = false; // mirror of `loaded` readable inside event callbacks
 
   async function rescan(rootDir: string) {
     scanning = true;
@@ -19,6 +37,8 @@
     try {
       entries = await scanLibrary(rootDir);
       localStorage.setItem(ROOT_KEY, rootDir);
+      await publishLibrary(entries);
+      await refreshQueue();
     } catch (e) {
       error = `Scan failed: ${e}`;
     } finally {
@@ -31,25 +51,96 @@
     if (typeof dir === "string") await rescan(dir);
   }
 
-  async function pick(entry: LibraryEntry) {
+  async function refreshQueue() {
+    try {
+      queue = await getQueue();
+    } catch {
+      // remote state not ready yet
+    }
+  }
+
+  async function playEntry(entry: LibraryEntry) {
     error = "";
     try {
       loaded = await loadSong(entry.txtPath);
+      playing = true;
     } catch (e) {
       error = String(e);
     }
   }
 
+  async function playNext() {
+    try {
+      const next = await nextInQueue();
+      if (next) {
+        loaded = await loadSong(next.txtPath);
+        playing = true;
+      } else {
+        loaded = null;
+        playing = false;
+      }
+    } catch (e) {
+      error = String(e);
+      loaded = null;
+      playing = false;
+    }
+  }
+
+  async function songFinished() {
+    // Natural end or skip: continue with the queue.
+    await playNext();
+  }
+
+  async function exitToList() {
+    loaded = null;
+    playing = false;
+    await reportStopped();
+  }
+
+  async function queueAdd(entry: LibraryEntry) {
+    const id = entries.indexOf(entry);
+    if (id >= 0) await addToQueue(id);
+  }
+
   onMount(() => {
     const saved = localStorage.getItem(ROOT_KEY);
     if (saved) void rescan(saved);
+
+    void getRemoteInfo().then(async (info) => {
+      remoteInfo = info;
+      if (info.url) qrDataUrl = await QRCode.toDataURL(info.url, { margin: 1, width: 160 });
+    });
+
+    const unsubs: Array<() => void> = [];
+    void onQueueUpdated(() => {
+      void refreshQueue().then(() => {
+        // Auto-start when idle and something got queued.
+        if (!playing && queue.queue.length > 0) void playNext();
+      });
+    }).then((u) => unsubs.push(u));
+    void onRemoteSkip(() => {
+      if (playing) void playNext();
+    }).then((u) => unsubs.push(u));
+
+    return () => unsubs.forEach((u) => u());
   });
 </script>
 
 {#if loaded}
-  <Sing {loaded} onExit={() => (loaded = null)} />
+  <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
 {:else}
-  <SongList {entries} {scanning} onPick={pick} onChangeFolder={pickFolder} />
+  <SongList
+    {entries}
+    {scanning}
+    queue={queue.queue}
+    remoteUrl={remoteInfo?.url ?? null}
+    {qrDataUrl}
+    onPick={playEntry}
+    onQueueAdd={queueAdd}
+    onQueueRemove={(uid) => void removeFromQueue(uid)}
+    onPlayNext={() => void playNext()}
+    onChangeFolder={pickFolder}
+  />
   {#if error}
     <p class="error">{error}</p>
   {/if}

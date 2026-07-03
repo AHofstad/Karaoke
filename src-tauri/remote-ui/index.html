@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Karaoke Queue</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: #10121a; color: #eee;
+    padding: 0.8rem; padding-bottom: 5rem;
+  }
+  h1 { font-size: 1.15rem; margin-bottom: 0.6rem; }
+  input {
+    width: 100%; padding: 0.6em 0.9em; font-size: 1rem;
+    border-radius: 10px; border: 1px solid #2a2f45;
+    background: #1a1e2e; color: #eee; margin-bottom: 0.7rem;
+  }
+  .name { margin-bottom: 0.4rem; }
+  .song {
+    display: flex; align-items: center; gap: 0.7rem;
+    padding: 0.45rem; border-radius: 10px; background: #1a1e2e;
+    margin-bottom: 0.45rem; border: 1px solid #2a2f45;
+  }
+  .song img, .song .ph {
+    width: 52px; height: 52px; border-radius: 6px; object-fit: cover;
+    background: #0c0e16; flex: none;
+    display: grid; place-items: center; color: #2a2f45; font-size: 1.4rem;
+  }
+  .meta { flex: 1; min-width: 0; }
+  .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a { color: #9aa3b8; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #0c0e16; color: #ff7ab0; margin-left: 4px; }
+  button {
+    border: none; border-radius: 8px; padding: 0.55em 1em;
+    background: #37b6ff; color: #062033; font-weight: 700; font-size: 0.95rem;
+  }
+  button:disabled { background: #2a2f45; color: #9aa3b8; }
+  #queuebar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: #171b29; border-top: 1px solid #2a2f45;
+    padding: 0.6rem 0.8rem; font-size: 0.9rem;
+  }
+  #queuebar .row { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+  #np { color: #37b6ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #qcount { color: #9aa3b8; flex: none; }
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: 4.4rem; background: rgba(0,0,0,0.85); color: #ffcf40;
+    padding: 0.5em 1em; border-radius: 8px; opacity: 0; transition: opacity 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+  <h1>🎤 Karaoke — add songs to the queue</h1>
+  <input id="singer" class="name" placeholder="Your name (shown with the song)" maxlength="40" />
+  <input id="search" type="search" placeholder="Search artist or title…" />
+  <div id="list"></div>
+
+  <div id="queuebar">
+    <div class="row">
+      <span id="np">Nothing playing</span>
+      <span id="qcount"></span>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let songs = [];
+
+  const savedName = localStorage.getItem("karaoke.singer") || "";
+  $("singer").value = savedName;
+  $("singer").addEventListener("input", () => localStorage.setItem("karaoke.singer", $("singer").value));
+
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 1800);
+  }
+
+  function norm(s) {
+    return s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  }
+
+  function render() {
+    const q = norm($("search").value.trim());
+    const list = $("list");
+    list.innerHTML = "";
+    for (const s of songs) {
+      if (q && !norm(s.artist + " " + s.title).includes(q)) continue;
+      const div = document.createElement("div");
+      div.className = "song";
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.src = "/api/cover/" + s.id;
+      img.onerror = () => { const ph = document.createElement("div"); ph.className = "ph"; ph.textContent = "♪"; img.replaceWith(ph); };
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const t = document.createElement("div");
+      t.className = "t";
+      t.textContent = s.title;
+      if (s.isDuet) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "DUET"; t.appendChild(b); }
+      const a = document.createElement("div");
+      a.className = "a";
+      a.textContent = s.artist;
+      meta.append(t, a);
+      const btn = document.createElement("button");
+      btn.textContent = "Queue";
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          const res = await fetch("/api/queue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ songId: s.id, singerName: $("singer").value.trim() || null }),
+          });
+          if (!res.ok) throw new Error(res.status);
+          toast("Added: " + s.title);
+          refreshQueue();
+        } catch (e) {
+          toast("Failed to add");
+        } finally {
+          setTimeout(() => (btn.disabled = false), 1200);
+        }
+      };
+      div.append(img, meta, btn);
+      list.appendChild(div);
+    }
+    if (!list.children.length) list.innerHTML = '<p style="color:#9aa3b8">No songs found.</p>';
+  }
+
+  async function loadSongs() {
+    try {
+      songs = await (await fetch("/api/songs")).json();
+      render();
+    } catch { toast("Could not load songs"); }
+  }
+
+  async function refreshQueue() {
+    try {
+      const q = await (await fetch("/api/queue")).json();
+      $("np").textContent = q.nowPlaying
+        ? "Now: " + q.nowPlaying.song.title + (q.nowPlaying.singer ? " — " + q.nowPlaying.singer : "")
+        : "Nothing playing";
+      $("qcount").textContent = q.queue.length + " in queue";
+    } catch { /* server briefly unreachable */ }
+  }
+
+  $("search").addEventListener("input", render);
+  loadSongs();
+  refreshQueue();
+  setInterval(refreshQueue, 4000);
+</script>
+</body>
+</html>

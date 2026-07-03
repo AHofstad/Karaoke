@@ -5,7 +5,11 @@
   import { songEndMs, timePhrases } from "../playback/clock";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
-  let { loaded, onExit }: { loaded: LoadedSong; onExit: () => void } = $props();
+  let {
+    loaded,
+    onExit,
+    onSkip,
+  }: { loaded: LoadedSong; onExit: () => void; onSkip: () => void } = $props();
 
   let canvas: HTMLCanvasElement;
   let audio: HTMLAudioElement | undefined = $state();
@@ -177,7 +181,13 @@
     ctx.roundRect(x, y, w, h, r);
   }
 
+  // Natural song end and skip continue with the queue; Esc leaves to the list.
   function finish() {
+    cancelAnimationFrame(raf);
+    onSkip();
+  }
+
+  function quit() {
     cancelAnimationFrame(raf);
     onExit();
   }
@@ -220,8 +230,12 @@
       case "_":
         adjustOffset(-50);
         break;
+      case "Tab":
+        e.preventDefault();
+        finish(); // skip to next in queue
+        break;
       case "Escape":
-        finish();
+        quit();
         break;
     }
   }
@@ -346,8 +360,8 @@
       <div class="pause-box">
         <h2>{song.artist} – {song.title}</h2>
         <p>
-          Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; +/−: display offset
-          ({displayOffsetMs} ms) &nbsp;·&nbsp; Esc: quit
+          Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; Tab: skip &nbsp;·&nbsp; +/−:
+          display offset ({displayOffsetMs} ms) &nbsp;·&nbsp; Esc: quit
         </p>
       </div>
     </div>

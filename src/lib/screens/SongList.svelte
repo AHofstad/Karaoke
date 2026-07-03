@@ -1,15 +1,28 @@
 <script lang="ts">
   import type { LibraryEntry } from "../library/scanner";
   import { filterEntries } from "../library/scanner";
+  import type { QueueItem } from "../queue/queue";
 
   let {
     entries,
+    queue,
+    remoteUrl,
+    qrDataUrl,
     onPick,
+    onQueueAdd,
+    onQueueRemove,
+    onPlayNext,
     onChangeFolder,
     scanning,
   }: {
     entries: LibraryEntry[];
+    queue: QueueItem[];
+    remoteUrl: string | null;
+    qrDataUrl: string;
     onPick: (entry: LibraryEntry) => void;
+    onQueueAdd: (entry: LibraryEntry) => void;
+    onQueueRemove: (uid: number) => void;
+    onPlayNext: () => void;
     onChangeFolder: () => void;
     scanning: boolean;
   } = $props();
@@ -18,51 +31,92 @@
   const filtered = $derived(filterEntries(entries, query));
 </script>
 
-<main>
-  <header>
-    <h1>Karaoke</h1>
-    <input type="search" placeholder="Search artist or title…" bind:value={query} />
-    <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
-  </header>
+<div class="layout">
+  <main>
+    <header>
+      <h1>Karaoke</h1>
+      <input type="search" placeholder="Search artist or title…" bind:value={query} />
+      <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
+    </header>
 
-  {#if scanning}
-    <p class="status">Scanning library…</p>
-  {:else if entries.length === 0}
-    <p class="status">No songs found. Pick your song folder.</p>
-  {:else if filtered.length === 0}
-    <p class="status">No match for “{query}”.</p>
-  {/if}
+    {#if scanning}
+      <p class="status">Scanning library…</p>
+    {:else if entries.length === 0}
+      <p class="status">No songs found. Pick your song folder.</p>
+    {:else if filtered.length === 0}
+      <p class="status">No match for “{query}”.</p>
+    {/if}
 
-  <div class="grid">
-    {#each filtered as entry (entry.txtPath)}
-      <button class="card" onclick={() => onPick(entry)}>
-        <div class="cover">
-          {#if entry.coverUrl}
-            <img src={entry.coverUrl} alt="" loading="lazy" />
-          {:else}
-            <div class="placeholder">♪</div>
-          {/if}
-          <div class="badges">
-            {#if entry.isDuet}<span class="badge duet">DUET</span>{/if}
-            {#if entry.hasVideo}<span class="badge video">VIDEO</span>{/if}
+    <div class="grid">
+      {#each filtered as entry (entry.txtPath)}
+        <div class="card">
+          <button class="cover" onclick={() => onPick(entry)} title="Play now">
+            {#if entry.coverUrl}
+              <img src={entry.coverUrl} alt="" loading="lazy" />
+            {:else}
+              <div class="placeholder">♪</div>
+            {/if}
+            <div class="badges">
+              {#if entry.isDuet}<span class="badge duet">DUET</span>{/if}
+              {#if entry.hasVideo}<span class="badge video">VIDEO</span>{/if}
+            </div>
+          </button>
+          <div class="meta">
+            <div class="text">
+              <div class="title">{entry.title}</div>
+              <div class="artist">{entry.artist}</div>
+            </div>
+            <button class="add" title="Add to queue" onclick={() => onQueueAdd(entry)}>+</button>
           </div>
         </div>
-        <div class="meta">
-          <div class="title">{entry.title}</div>
-          <div class="artist">{entry.artist}</div>
-        </div>
-      </button>
-    {/each}
-  </div>
-</main>
+      {/each}
+    </div>
+  </main>
+
+  <aside>
+    <h2>Queue</h2>
+    {#if queue.length === 0}
+      <p class="status">Empty. Click + on a song, or scan the QR with your phone.</p>
+    {:else}
+      <ol>
+        {#each queue as item (item.uid)}
+          <li>
+            <div class="qtext">
+              <div class="title">{item.song.title}</div>
+              <div class="artist">
+                {item.song.artist}{item.singer ? ` — ${item.singer}` : ""}
+              </div>
+            </div>
+            <button class="remove" title="Remove" onclick={() => onQueueRemove(item.uid)}>×</button>
+          </li>
+        {/each}
+      </ol>
+      <button class="play" onclick={onPlayNext}>▶ Play queue</button>
+    {/if}
+
+    {#if remoteUrl}
+      <div class="remote">
+        <h2>Phone remote</h2>
+        {#if qrDataUrl}<img class="qr" src={qrDataUrl} alt="QR code" />{/if}
+        <code>{remoteUrl}</code>
+        <p class="status">Guests on the same Wi-Fi can browse and queue songs.</p>
+      </div>
+    {/if}
+  </aside>
+</div>
 
 <style>
-  main {
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
     min-height: 100vh;
     background: #10121a;
     color: #eee;
     font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
+  }
+  main {
     padding: 1rem 1.5rem 2rem;
+    min-width: 0;
   }
   header {
     display: flex;
@@ -78,6 +132,10 @@
   h1 {
     margin: 0;
     font-size: 1.4rem;
+  }
+  h2 {
+    margin: 0 0 0.6rem;
+    font-size: 1.05rem;
   }
   input {
     flex: 1;
@@ -107,6 +165,7 @@
   }
   .status {
     color: #9aa3b8;
+    font-size: 0.9rem;
   }
   .grid {
     display: grid;
@@ -117,11 +176,7 @@
     background: #1a1e2e;
     border: 1px solid #2a2f45;
     border-radius: 10px;
-    padding: 0;
     overflow: hidden;
-    cursor: pointer;
-    text-align: left;
-    color: inherit;
     transition: transform 0.08s ease, border-color 0.08s ease;
   }
   .card:hover {
@@ -132,6 +187,11 @@
     position: relative;
     aspect-ratio: 1;
     background: #0c0e16;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: none;
+    cursor: pointer;
   }
   .cover img {
     width: 100%;
@@ -168,7 +228,14 @@
     color: #37b6ff;
   }
   .meta {
-    padding: 0.55rem 0.7rem 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.55rem 0.7rem 0.7rem;
+  }
+  .text {
+    flex: 1;
+    min-width: 0;
   }
   .title {
     font-weight: 600;
@@ -182,5 +249,84 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .add {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid #2a2f45;
+    background: none;
+    color: #37b6ff;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .add:hover {
+    border-color: #37b6ff;
+    background: #101d2a;
+  }
+  aside {
+    border-left: 1px solid #2a2f45;
+    padding: 1.4rem 1rem;
+    background: #12151f;
+  }
+  ol {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #1a1e2e;
+    border: 1px solid #2a2f45;
+    border-radius: 8px;
+    padding: 0.45rem 0.55rem;
+  }
+  .qtext {
+    flex: 1;
+    min-width: 0;
+  }
+  .remove {
+    flex: none;
+    background: none;
+    border: none;
+    color: #9aa3b8;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+  .remove:hover {
+    color: #ff7a7a;
+  }
+  .play {
+    width: 100%;
+    padding: 0.55em;
+    border: none;
+    border-radius: 8px;
+    background: #37b6ff;
+    color: #062033;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .remote {
+    margin-top: 1.4rem;
+    border-top: 1px solid #2a2f45;
+    padding-top: 1rem;
+  }
+  .qr {
+    display: block;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: #fff;
+  }
+  code {
+    font-size: 0.8rem;
+    color: #37b6ff;
+    word-break: break-all;
   }
 </style>
