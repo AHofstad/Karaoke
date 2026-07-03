@@ -3,8 +3,7 @@
 
   let { queue }: { queue: QueueItem[] } = $props();
 
-  const START_DELAY_MS = 3000;
-  const etas = $derived(queueEtas(queue, START_DELAY_MS));
+  const etas = $derived(queueEtas(queue, 0));
 </script>
 
 <div class="intermission">
@@ -17,7 +16,7 @@
           <span class="title">{item.song.title}</span>
           <span class="artist">{item.singer || item.song.artist}</span>
         </span>
-        <span class="eta">{formatEta(etas[i])}</span>
+        {#if i > 0}<span class="eta">{formatEta(etas[i])}</span>{/if}
       </li>
     {/each}
   </ol>
