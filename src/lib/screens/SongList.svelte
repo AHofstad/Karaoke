@@ -39,16 +39,17 @@
       <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
     </header>
 
-    {#if scanning}
-      <p class="status">Scanning library…</p>
-    {:else if entries.length === 0}
-      <p class="status">No songs found. Pick your song folder.</p>
-    {:else if filtered.length === 0}
-      <p class="status">No match for “{query}”.</p>
-    {/if}
+    <div class="scroll">
+      {#if scanning}
+        <p class="status">Scanning library…</p>
+      {:else if entries.length === 0}
+        <p class="status">No songs found. Pick your song folder.</p>
+      {:else if filtered.length === 0}
+        <p class="status">No match for “{query}”.</p>
+      {/if}
 
-    <div class="grid">
-      {#each filtered as entry (entry.txtPath)}
+      <div class="grid">
+        {#each filtered as entry (entry.txtPath)}
         <div class="card">
           <button class="cover" onclick={() => onPick(entry)} title="Play now">
             {#if entry.coverUrl}
@@ -66,10 +67,11 @@
               <div class="title">{entry.title}</div>
               <div class="artist">{entry.artist}</div>
             </div>
-            <button class="add" title="Add to queue" onclick={() => onQueueAdd(entry)}>+</button>
+              <button class="add" title="Add to queue" onclick={() => onQueueAdd(entry)}>+</button>
+            </div>
           </div>
-        </div>
-      {/each}
+        {/each}
+      </div>
     </div>
   </main>
 
@@ -116,20 +118,24 @@
     font-family: "Segoe UI", "Yu Gothic UI", system-ui, sans-serif;
   }
   main {
-    padding: 1rem 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
-    overflow-y: auto;
+    min-height: 0;
+    padding: 1rem 0 0 1.5rem;
   }
   header {
     display: flex;
     align-items: center;
     gap: 1rem;
-    margin-bottom: 1rem;
-    position: sticky;
-    top: 0;
-    background: #10121a;
-    padding: 0.5rem 0;
-    z-index: 1;
+    padding: 0.5rem 1.5rem 1rem 0;
+    flex: none;
+  }
+  .scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 1.5rem 2rem 0;
   }
   h1 {
     margin: 0;
