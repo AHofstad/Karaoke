@@ -6,12 +6,18 @@ import { isUltraStarChart, msAtBeat, parseUltraStar } from "../src/lib/parser/ul
 
 const SONGS_DIR = join(import.meta.dirname, "..", "Research", "songs");
 
-function findTxtFiles(dir: string): string[] {
+function findTxtFiles(dir: string, depth = 0): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
-    if (statSync(full).isDirectory()) out.push(...findTxtFiles(full));
-    else if (entry.toLowerCase().endsWith(".txt")) out.push(full);
+    if (statSync(full).isDirectory()) {
+      // A nested "songs" folder is a manual copy used to test library
+      // dedupe in the app — not part of the golden corpus.
+      if (depth === 0 && entry.toLowerCase() === "songs") continue;
+      out.push(...findTxtFiles(full, depth + 1));
+    } else if (entry.toLowerCase().endsWith(".txt")) {
+      out.push(full);
+    }
   }
   return out;
 }
