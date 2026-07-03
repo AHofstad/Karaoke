@@ -9,6 +9,7 @@
   import { loadSong, type LoadedSong } from "$lib/playback/media";
   import {
     addToQueue,
+    clearQueue,
     getQueue,
     getRemoteInfo,
     nextInQueue,
@@ -85,6 +86,7 @@
   }
 
   let intermission = $state(false);
+  let intermissionTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function songFinished() {
     // Natural end or skip: show the upcoming queue briefly, then continue.
@@ -92,12 +94,26 @@
     await refreshQueue();
     if (queue.queue.length > 0) {
       intermission = true;
-      setTimeout(() => {
+      intermissionTimer = setTimeout(() => {
         intermission = false;
         void playNext();
       }, 3000);
     } else {
       await playNext();
+    }
+  }
+
+  function cancelIntermission() {
+    clearTimeout(intermissionTimer);
+    intermission = false;
+    playing = false;
+    void reportStopped();
+  }
+
+  function onGlobalKey(e: KeyboardEvent) {
+    if (intermission && e.key === "Escape") {
+      e.preventDefault();
+      cancelIntermission();
     }
   }
 
@@ -131,6 +147,8 @@
   });
 </script>
 
+<svelte:window onkeydown={onGlobalKey} />
+
 {#if loaded}
   {#key playCounter}
     <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
@@ -146,6 +164,7 @@
     {qrDataUrl}
     onQueueAdd={queueAdd}
     onQueueRemove={(uid) => void removeFromQueue(uid)}
+    onQueueClear={() => void clearQueue()}
     onPlayNext={() => void playNext()}
     onChangeFolder={pickFolder}
   />

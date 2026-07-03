@@ -328,6 +328,12 @@ pub fn queue_remove(app: AppHandle, state: tauri::State<'_, SharedState>, uid: u
     let _ = app.emit("queue-updated", ());
 }
 
+#[tauri::command]
+pub fn queue_clear(app: AppHandle, state: tauri::State<'_, SharedState>) {
+    state.lock().unwrap().queue.clear();
+    let _ = app.emit("queue-updated", ());
+}
+
 /// Pop the next queued song and mark it as now playing. Returns its txt path
 /// alongside the item so the desktop can load it.
 #[derive(Serialize)]

@@ -10,6 +10,7 @@
     qrDataUrl,
     onQueueAdd,
     onQueueRemove,
+    onQueueClear,
     onPlayNext,
     onChangeFolder,
     scanning,
@@ -20,6 +21,7 @@
     qrDataUrl: string;
     onQueueAdd: (entry: LibraryEntry) => void;
     onQueueRemove: (uid: number) => void;
+    onQueueClear: () => void;
     onPlayNext: () => void;
     onChangeFolder: () => void;
     scanning: boolean;
@@ -116,7 +118,10 @@
       </div>
     {/if}
 
-    <h2>Queue</h2>
+    <div class="queue-head">
+      <h2>Queue</h2>
+      <button class="clear" onclick={onQueueClear} disabled={queue.length === 0}>Clear</button>
+    </div>
     <button class="play" onclick={onPlayNext} disabled={queue.length === 0}>▶ Play queue</button>
     {#if queue.length === 0}
       <p class="status">Empty. Click a song to add it, or scan the QR with your phone.</p>
@@ -344,6 +349,32 @@
   .play:disabled {
     background: #2a2f45;
     color: #9aa3b8;
+    cursor: default;
+  }
+  .queue-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .queue-head h2 {
+    margin: 0;
+  }
+  .clear {
+    background: none;
+    border: 1px solid #2a2f45;
+    color: #9aa3b8;
+    border-radius: 8px;
+    padding: 0.25em 0.7em;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .clear:hover:enabled {
+    color: #ff7a7a;
+    border-color: #ff7a7a;
+  }
+  .clear:disabled {
+    opacity: 0.4;
     cursor: default;
   }
   .remote {
