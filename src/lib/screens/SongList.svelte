@@ -90,9 +90,8 @@
               <div class="title">{entry.title}</div>
               <div class="artist">{entry.artist}</div>
             </div>
-              <button class="add" title="Add to queue" onclick={() => onQueueAdd(entry)}>+</button>
-            </div>
           </div>
+        </div>
         {/each}
       </div>
     </div>
@@ -284,22 +283,6 @@
     color: #9aa3b8;
     font-size: 0.85rem;
     word-break: break-word;
-  }
-  .add {
-    flex: none;
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid #2a2f45;
-    background: none;
-    color: #37b6ff;
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-  .add:hover {
-    border-color: #37b6ff;
-    background: #101d2a;
   }
   .divider {
     cursor: col-resize;
