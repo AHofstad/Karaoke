@@ -1,0 +1,193 @@
+import type { Note, SongTiming } from "../parser/types";
+import type { TimedPhrase } from "../playback/clock";
+import { displayPhraseIndex } from "../playback/clock";
+import { msAtBeat } from "../parser/ultrastar";
+import { layoutPhrase, lyricFont, type PhraseLayout } from "./layout";
+
+export interface LaneColors {
+  /** Unsung text. */
+  base: string;
+  /** Sung/filling text. */
+  sung: string;
+  /** Sung fill for golden notes. */
+  golden: string;
+  outline: string;
+}
+
+export const SOLO_COLORS: LaneColors = {
+  base: "#e8e8e8",
+  sung: "#37b6ff",
+  golden: "#ffcf40",
+  outline: "rgba(0,0,0,0.85)",
+};
+
+export const DUET_P2_COLORS: LaneColors = {
+  base: "#e8e8e8",
+  sung: "#ff7ab0",
+  golden: "#ffcf40",
+  outline: "rgba(0,0,0,0.85)",
+};
+
+export interface LaneOptions {
+  /** Vertical center of the current line, in px. */
+  centerY: number;
+  colors: LaneColors;
+  /** Singer name shown at the lane edge (duets). */
+  name?: string;
+  baseFontSize: number;
+}
+
+const NEXT_LINE_SCALE = 0.6;
+const COUNTDOWN_THRESHOLD_MS = 4000;
+
+interface LayoutCacheEntry {
+  phraseIndex: number;
+  fontSize: number;
+  layout: PhraseLayout;
+}
+
+/** Renders one voice's lyric lane; create one per voice per song. */
+export class LyricsLane {
+  private cache: LayoutCacheEntry | null = null;
+  private nextCache: LayoutCacheEntry | null = null;
+
+  constructor(
+    private phrases: TimedPhrase[],
+    private timing: SongTiming,
+  ) {}
+
+  render(ctx: CanvasRenderingContext2D, nowMs: number, width: number, opts: LaneOptions): void {
+    const idx = displayPhraseIndex(this.phrases, nowMs);
+    if (idx >= this.phrases.length) return;
+
+    const maxWidth = width * 0.92;
+    const current = this.phrases[idx];
+    const layout = this.layoutFor(idx, ctx, maxWidth, opts.baseFontSize, false);
+
+    if (opts.name) this.drawName(ctx, opts);
+    this.drawPhrase(ctx, current, layout, nowMs, width, opts.centerY, opts.colors);
+
+    const next = this.phrases[idx + 1];
+    if (next) {
+      const nextLayout = this.layoutFor(idx + 1, ctx, maxWidth, opts.baseFontSize * NEXT_LINE_SCALE, true);
+      this.drawUpcoming(ctx, nextLayout, width, opts.centerY + opts.baseFontSize * 1.15, opts.colors);
+    }
+
+    // Countdown dots when the current phrase is still far away.
+    if (nowMs < current.startMs && current.startMs - nowMs > 1000) {
+      this.drawCountdown(ctx, current.startMs - nowMs, width, opts);
+    }
+  }
+
+  private layoutFor(
+    phraseIndex: number,
+    ctx: CanvasRenderingContext2D,
+    maxWidth: number,
+    fontSize: number,
+    isNext: boolean,
+  ): PhraseLayout {
+    const slot = isNext ? this.nextCache : this.cache;
+    if (slot && slot.phraseIndex === phraseIndex && slot.fontSize === fontSize) return slot.layout;
+    const layout = layoutPhrase(ctx, this.phrases[phraseIndex].phrase, maxWidth, fontSize);
+    const entry = { phraseIndex, fontSize, layout };
+    if (isNext) this.nextCache = entry;
+    else this.cache = entry;
+    return layout;
+  }
+
+  private drawPhrase(
+    ctx: CanvasRenderingContext2D,
+    timed: TimedPhrase,
+    layout: PhraseLayout,
+    nowMs: number,
+    width: number,
+    centerY: number,
+    colors: LaneColors,
+  ): void {
+    const left = (width - layout.totalWidth) / 2;
+    ctx.textBaseline = "middle";
+
+    for (const box of layout.boxes) {
+      const note = box.note;
+      const noteStart = msAtBeat(this.timing, note.startBeat);
+      const noteEnd = msAtBeat(this.timing, note.startBeat + note.lengthBeats);
+      const x = left + box.x;
+      const active = nowMs >= noteStart && nowMs < noteEnd;
+      const fontSize = active ? layout.fontSize * 1.08 : layout.fontSize;
+      ctx.font = lyricFont(fontSize, note.type === "freestyle");
+
+      // Base (unsung) text with outline for readability over video.
+      ctx.lineWidth = Math.max(3, fontSize / 9);
+      ctx.strokeStyle = colors.outline;
+      ctx.strokeText(note.text, x, centerY);
+      ctx.fillStyle = colors.base;
+      ctx.fillText(note.text, x, centerY);
+
+      // Sung overlay: full for finished notes, clipped fraction for the active one.
+      let fillFraction = 0;
+      if (nowMs >= noteEnd) fillFraction = 1;
+      else if (active && noteEnd > noteStart) fillFraction = (nowMs - noteStart) / (noteEnd - noteStart);
+
+      if (fillFraction > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, centerY - fontSize, box.width * fillFraction, fontSize * 2);
+        ctx.clip();
+        ctx.fillStyle = isGolden(note) ? colors.golden : colors.sung;
+        ctx.fillText(note.text, x, centerY);
+        ctx.restore();
+      }
+    }
+  }
+
+  private drawUpcoming(
+    ctx: CanvasRenderingContext2D,
+    layout: PhraseLayout,
+    width: number,
+    y: number,
+    colors: LaneColors,
+  ): void {
+    const left = (width - layout.totalWidth) / 2;
+    ctx.textBaseline = "middle";
+    for (const box of layout.boxes) {
+      ctx.font = lyricFont(layout.fontSize, box.note.type === "freestyle");
+      ctx.lineWidth = Math.max(2, layout.fontSize / 10);
+      ctx.strokeStyle = colors.outline;
+      ctx.strokeText(box.note.text, left + box.x, y);
+      ctx.fillStyle = "rgba(232,232,232,0.55)";
+      ctx.fillText(box.note.text, left + box.x, y);
+    }
+  }
+
+  private drawCountdown(
+    ctx: CanvasRenderingContext2D,
+    remainingMs: number,
+    width: number,
+    opts: LaneOptions,
+  ): void {
+    if (remainingMs > COUNTDOWN_THRESHOLD_MS) remainingMs = COUNTDOWN_THRESHOLD_MS;
+    const total = 5;
+    const dots = Math.min(total, Math.ceil((remainingMs / COUNTDOWN_THRESHOLD_MS) * total));
+    const r = 7;
+    const gap = 26;
+    const startX = width / 2 - ((total - 1) * gap) / 2;
+    const y = opts.centerY - opts.baseFontSize * 1.4;
+    for (let i = 0; i < dots; i++) {
+      ctx.beginPath();
+      ctx.arc(startX + i * gap, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = opts.colors.sung;
+      ctx.fill();
+    }
+  }
+
+  private drawName(ctx: CanvasRenderingContext2D, opts: LaneOptions): void {
+    ctx.font = lyricFont(Math.round(opts.baseFontSize * 0.4));
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = opts.colors.sung;
+    ctx.fillText(opts.name!, 16, opts.centerY - opts.baseFontSize);
+  }
+}
+
+function isGolden(note: Note): boolean {
+  return note.type === "golden" || note.type === "rapGolden";
+}
