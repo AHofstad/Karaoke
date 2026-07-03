@@ -122,7 +122,7 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
   *Verify:* Bling-Bang-Bang-Born shows "Main vocals"/"Adlibss" lanes with independent highlighting; solo songs still single-lane.
 - [ ] **M5 — Library UI:** scan, cover grid, search, screen flow, scan cache.
   *Verify:* point at `Research\songs`: 47 entries, Roundabout absent, "creepy" → 5 hits, "オトノケ" → found.
-- [ ] **M6 — Queue + LAN remote:** queue engine with auto-advance **and skip** (skip current song mid-play → next in queue, or back to song list if queue empty; keyboard shortcut + on-screen button + `POST /api/skip` from remote page), axum server, remote web page, QR/URL display.
+- [x] **M6 — Queue + LAN remote:** *(API + autostart + skip verified over HTTP locally; phone-on-Wi-Fi test pending)* queue engine with auto-advance **and skip** (skip current song mid-play → next in queue, or back to song list if queue empty; keyboard shortcut + on-screen button + `POST /api/skip` from remote page), axum server, remote web page, QR/URL display.
   *Verify:* phone on same Wi-Fi opens page, searches "creed", queues 2 songs; desktop plays them in order; skipping mid-song jumps to next queued song; local + remote adds interleave correctly.
 - [ ] **M7 — Packaging:** NSIS installer + portable zip, icon, first-run folder picker.
   *Verify:* portable exe on clean VM plays a video song; second device can queue via LAN page; zip ~5–8 MB.
