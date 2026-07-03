@@ -3,6 +3,7 @@
   import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { songEndMs, timePhrases } from "../playback/clock";
+  import { msAtBeat } from "../parser/ultrastar";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
   let {
@@ -60,6 +61,16 @@
 
   const lanes = song.voices.map(
     (voice) => new LyricsLane(timePhrases(voice, timing), timing),
+  );
+
+  // When all lyrics are sung the outro keeps playing; from that point on the
+  // HUD offers the skip shortcut.
+  const lastLyricEndMs = Math.max(
+    0,
+    ...song.voices.map((v) => {
+      const last = v.phrases[v.phrases.length - 1];
+      return last ? msAtBeat(timing, last.endBeat) : 0;
+    }),
   );
 
   function master(): HTMLMediaElement | undefined {
@@ -167,6 +178,17 @@
     ctx.strokeText(text, barX + barW + 12, barY + barH / 2);
     ctx.fillStyle = "#e8e8e8";
     ctx.fillText(text, barX + barW + 12, barY + barH / 2);
+
+    // Outro: all lyrics sung, offer the skip shortcut next to the bar.
+    if (lastLyricEndMs > 0 && t >= lastLyricEndMs) {
+      const hint = "Tab: next song";
+      const timeWidth = ctx.measureText(text).width;
+      ctx.font = `600 ${Math.round(fontSize * 0.8)}px "Segoe UI", system-ui, sans-serif`;
+      const x = barX + barW + 12 + timeWidth + 24;
+      ctx.strokeText(hint, x, barY + barH / 2);
+      ctx.fillStyle = "#37b6ff";
+      ctx.fillText(hint, x, barY + barH / 2);
+    }
   }
 
   function roundRect(
