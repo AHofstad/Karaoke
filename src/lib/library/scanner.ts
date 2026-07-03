@@ -1,7 +1,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { readDir, readFile } from "@tauri-apps/plugin-fs";
 import { decodeSongText } from "../parser/encoding";
-import { isUltraStarChart, parseUltraStar } from "../parser/ultrastar";
+import { isUltraStarChart, msAtBeat, parseUltraStar } from "../parser/ultrastar";
 import { findFileFuzzy } from "../playback/media";
 
 export interface LibraryEntry {
@@ -12,6 +12,8 @@ export interface LibraryEntry {
   coverUrl?: string;
   hasVideo: boolean;
   isDuet: boolean;
+  /** Estimated song length (last lyric + outro margin) for queue ETAs. */
+  durationMs: number;
 }
 
 /**
@@ -72,6 +74,14 @@ async function loadEntry(txtPath: string): Promise<LibraryEntry | null> {
     // directory listing failed — entry still usable without cover
   }
 
+  // Songs play to the end of the audio, which we don't know at scan time;
+  // last lyric + a typical outro is a good ETA estimate.
+  let lastLyricMs = 0;
+  for (const voice of song.voices) {
+    const last = voice.phrases[voice.phrases.length - 1];
+    if (last) lastLyricMs = Math.max(lastLyricMs, msAtBeat(song.timing, last.endBeat));
+  }
+
   return {
     txtPath,
     dir,
@@ -80,6 +90,7 @@ async function loadEntry(txtPath: string): Promise<LibraryEntry | null> {
     coverUrl,
     hasVideo,
     isDuet: song.isDuet,
+    durationMs: lastLyricMs + 15000,
   };
 }
 

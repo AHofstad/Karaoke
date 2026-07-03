@@ -2,6 +2,7 @@
   import { open } from "@tauri-apps/plugin-dialog";
   import { onMount } from "svelte";
   import QRCode from "qrcode";
+  import Intermission from "$lib/screens/Intermission.svelte";
   import Sing from "$lib/screens/Sing.svelte";
   import SongList from "$lib/screens/SongList.svelte";
   import { scanLibrary, type LibraryEntry } from "$lib/library/scanner";
@@ -26,7 +27,7 @@
   let scanning = $state(false);
   let loaded: LoadedSong | null = $state(null);
   let error = $state("");
-  let queue: QueueSnapshot = $state({ nowPlaying: null, queue: [] });
+  let queue: QueueSnapshot = $state({ nowPlaying: null, remainingMs: null, queue: [] });
   let remoteInfo: RemoteInfo | null = $state(null);
   let qrDataUrl = $state("");
   let playing = false; // mirror of `loaded` readable inside event callbacks
@@ -94,9 +95,21 @@
     }
   }
 
+  let intermission = $state(false);
+
   async function songFinished() {
-    // Natural end or skip: continue with the queue.
-    await playNext();
+    // Natural end or skip: show the upcoming queue briefly, then continue.
+    loaded = null;
+    await refreshQueue();
+    if (queue.queue.length > 0) {
+      intermission = true;
+      setTimeout(() => {
+        intermission = false;
+        void playNext();
+      }, 3000);
+    } else {
+      await playNext();
+    }
   }
 
   async function exitToList() {
@@ -133,6 +146,8 @@
   {#key playCounter}
     <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
   {/key}
+{:else if intermission}
+  <Intermission queue={queue.queue} />
 {:else}
   <SongList
     {entries}

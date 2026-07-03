@@ -4,6 +4,7 @@
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { songEndMs, timePhrases } from "../playback/clock";
   import { msAtBeat } from "../parser/ultrastar";
+  import { reportProgress } from "../queue/queue";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
   let {
@@ -405,8 +406,16 @@
 
   onMount(() => {
     raf = requestAnimationFrame(frame);
+    // Feed the remote server the remaining time for queue ETAs.
+    const progressTimer = setInterval(() => {
+      const durationMs = currentDurationMs();
+      if (Number.isFinite(durationMs) && durationMs > 0) {
+        void reportProgress(Math.max(0, durationMs - nowMs())).catch(() => {});
+      }
+    }, 5000);
     return () => {
       cancelAnimationFrame(raf);
+      clearInterval(progressTimer);
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   });

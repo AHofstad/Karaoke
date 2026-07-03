@@ -49,6 +49,7 @@
     padding: 0.55rem 0.7rem; margin-bottom: 0.45rem;
   }
   ol li .pos { color: #37b6ff; font-weight: 700; flex: none; width: 1.4em; }
+  ol li .eta { color: #ffcf40; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex;
     background: #171b29; border-top: 1px solid #2a2f45;
@@ -186,6 +187,9 @@
 
       const list = $("queuelist");
       list.innerHTML = "";
+      // Estimated start: remaining time of the playing song plus durations
+      // of everything queued before the item.
+      let acc = q.remainingMs || 0;
       q.queue.forEach((item, i) => {
         const li = document.createElement("li");
         const pos = document.createElement("span");
@@ -200,7 +204,12 @@
         a.className = "a";
         a.textContent = item.singer || item.song.artist;
         meta.append(t, a);
-        li.append(pos, meta);
+        const eta = document.createElement("span");
+        eta.className = "eta";
+        const sec = Math.max(0, Math.round(acc / 1000));
+        eta.textContent = "+" + Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+        acc += item.song.durationMs || 0;
+        li.append(pos, meta, eta);
         list.appendChild(li);
       });
       $("qempty").style.display = q.queue.length ? "none" : "block";

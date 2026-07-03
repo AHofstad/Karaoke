@@ -24,6 +24,7 @@ pub fn run() {
             remote::queue_remove,
             remote::queue_next,
             remote::playing_stopped,
+            remote::set_progress,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

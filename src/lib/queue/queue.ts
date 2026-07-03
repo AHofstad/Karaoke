@@ -8,19 +8,50 @@ export interface RemoteSongWire {
   title: string;
   isDuet: boolean;
   hasVideo: boolean;
+  durationMs: number;
   coverPath?: string;
   txtPath: string;
 }
 
 export interface QueueItem {
   uid: number;
-  song: { id: number; artist: string; title: string; isDuet: boolean; hasVideo: boolean };
+  song: {
+    id: number;
+    artist: string;
+    title: string;
+    isDuet: boolean;
+    hasVideo: boolean;
+    durationMs: number;
+  };
   singer?: string | null;
 }
 
 export interface QueueSnapshot {
   nowPlaying: QueueItem | null;
+  /** Time left in the playing song (desktop pushes this periodically). */
+  remainingMs: number | null;
   queue: QueueItem[];
+}
+
+/**
+ * Estimated wait until each queue item starts: remaining time of the current
+ * song plus the durations of everything queued before it.
+ */
+export function queueEtas(queue: QueueItem[], remainingMs: number | null): number[] {
+  const etas: number[] = [];
+  let acc = remainingMs ?? 0;
+  for (const item of queue) {
+    etas.push(acc);
+    acc += item.song.durationMs;
+  }
+  return etas;
+}
+
+export function formatEta(ms: number): string {
+  const totalSec = Math.max(0, Math.round(ms / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `+${min}:${String(sec).padStart(2, "0")}`;
 }
 
 export interface RemoteInfo {
@@ -36,6 +67,7 @@ export async function publishLibrary(entries: LibraryEntry[]): Promise<void> {
     title: e.title,
     isDuet: e.isDuet,
     hasVideo: e.hasVideo,
+    durationMs: e.durationMs,
     coverPath: coverPathFromUrl(e),
     txtPath: e.txtPath,
   }));
@@ -61,6 +93,8 @@ export const removeFromQueue = (uid: number) => invoke("queue_remove", { uid });
 export const nextInQueue = () =>
   invoke<{ item: QueueItem; txtPath: string } | null>("queue_next");
 export const reportStopped = () => invoke("playing_stopped");
+export const reportProgress = (remainingMs: number) =>
+  invoke("set_progress", { remainingMs });
 
 export function onQueueUpdated(cb: () => void): Promise<UnlistenFn> {
   return listen("queue-updated", cb);

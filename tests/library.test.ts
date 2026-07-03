@@ -8,6 +8,7 @@ const entry = (artist: string, title: string): LibraryEntry => ({
   artist,
   hasVideo: false,
   isDuet: false,
+  durationMs: 180000,
 });
 
 const ENTRIES = [

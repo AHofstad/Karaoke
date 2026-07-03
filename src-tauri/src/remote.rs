@@ -27,6 +27,9 @@ pub struct RemoteSong {
     pub is_duet: bool,
     #[serde(rename = "hasVideo")]
     pub has_video: bool,
+    /// Estimated length for queue ETAs; serialized to guests.
+    #[serde(rename = "durationMs", default)]
+    pub duration_ms: f64,
     /// Accepted from the desktop frontend, never serialized to guests.
     #[serde(rename = "coverPath", skip_serializing, default)]
     pub cover_path: Option<String>,
@@ -46,6 +49,8 @@ pub struct RemoteState {
     pub library: Vec<RemoteSong>,
     pub queue: Vec<QueueItem>,
     pub now_playing: Option<QueueItem>,
+    /// Time left in the playing song, pushed periodically by the desktop.
+    pub now_remaining_ms: Option<f64>,
     pub port: u16,
 }
 
@@ -118,15 +123,22 @@ async fn songs(State(ctx): State<ServerCtx>, Query(query): Query<SongsQuery>) ->
 struct QueueView {
     #[serde(rename = "nowPlaying")]
     now_playing: Option<QueueItem>,
+    #[serde(rename = "remainingMs")]
+    remaining_ms: Option<f64>,
     queue: Vec<QueueItem>,
+}
+
+fn queue_view(state: &RemoteState) -> QueueView {
+    QueueView {
+        now_playing: state.now_playing.clone(),
+        remaining_ms: state.now_remaining_ms,
+        queue: state.queue.clone(),
+    }
 }
 
 async fn queue_get(State(ctx): State<ServerCtx>) -> Json<QueueView> {
     let state = ctx.state.lock().unwrap();
-    Json(QueueView {
-        now_playing: state.now_playing.clone(),
-        queue: state.queue.clone(),
-    })
+    Json(queue_view(&state))
 }
 
 #[derive(Deserialize)]
@@ -158,10 +170,7 @@ async fn queue_post(
             song,
             singer,
         });
-        QueueView {
-            now_playing: state.now_playing.clone(),
-            queue: state.queue.clone(),
-        }
+        queue_view(&state)
     };
     let _ = ctx.app.emit("queue-updated", ());
     let _ = ctx.app.emit("queue-added", ());
@@ -241,6 +250,8 @@ pub fn get_remote_info(state: tauri::State<'_, SharedState>) -> RemoteInfo {
 pub struct QueueSnapshot {
     #[serde(rename = "nowPlaying")]
     pub now_playing: Option<QueueItem>,
+    #[serde(rename = "remainingMs")]
+    pub remaining_ms: Option<f64>,
     pub queue: Vec<QueueItem>,
 }
 
@@ -249,8 +260,15 @@ pub fn queue_snapshot(state: tauri::State<'_, SharedState>) -> QueueSnapshot {
     let s = state.lock().unwrap();
     QueueSnapshot {
         now_playing: s.now_playing.clone(),
+        remaining_ms: s.now_remaining_ms,
         queue: s.queue.clone(),
     }
+}
+
+/// Desktop pushes the playing song's remaining time for queue ETAs.
+#[tauri::command]
+pub fn set_progress(state: tauri::State<'_, SharedState>, remaining_ms: f64) {
+    state.lock().unwrap().now_remaining_ms = Some(remaining_ms);
 }
 
 #[tauri::command]
@@ -304,6 +322,7 @@ pub fn queue_next(app: AppHandle, state: tauri::State<'_, SharedState>) -> Optio
         } else {
             let item = s.queue.remove(0);
             s.now_playing = Some(item.clone());
+            s.now_remaining_ms = Some(item.song.duration_ms);
             let txt_path = item.song.txt_path.clone();
             Some(NextSong { item, txt_path })
         }
@@ -315,6 +334,10 @@ pub fn queue_next(app: AppHandle, state: tauri::State<'_, SharedState>) -> Optio
 /// Desktop reports playback stopped outside the queue flow.
 #[tauri::command]
 pub fn playing_stopped(app: AppHandle, state: tauri::State<'_, SharedState>) {
-    state.lock().unwrap().now_playing = None;
+    {
+        let mut s = state.lock().unwrap();
+        s.now_playing = None;
+        s.now_remaining_ms = None;
+    }
     let _ = app.emit("queue-updated", ());
 }
