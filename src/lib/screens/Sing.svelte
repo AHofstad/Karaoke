@@ -23,6 +23,26 @@
   let triedVideoTranscode = false;
   let blobUrl: string | undefined;
   let notice = $state("");
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Display latency compensation (beamers/TVs delay the image while audio
+  // plays immediately). Positive = draw lyrics/video this many ms earlier.
+  const OFFSET_KEY = "karaoke.displayOffsetMs";
+  let displayOffsetMs = $state(Number(localStorage.getItem(OFFSET_KEY)) || 0);
+
+  function adjustOffset(deltaMs: number) {
+    displayOffsetMs += deltaMs;
+    localStorage.setItem(OFFSET_KEY, String(displayOffsetMs));
+    showNotice(
+      `Display offset: ${displayOffsetMs > 0 ? "+" : ""}${displayOffsetMs} ms (lyrics ${displayOffsetMs >= 0 ? "earlier" : "later"})`,
+    );
+  }
+
+  function showNotice(text: string) {
+    notice = text;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => (notice = ""), 2500);
+  }
 
   // The component is remounted per song, so capturing the initial prop value is intended.
   // svelte-ignore state_referenced_locally
@@ -63,11 +83,13 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
-    const t = nowMs();
+    const rawT = nowMs();
+    // Visual layers render earlier by the configured display offset.
+    const t = rawT + displayOffsetMs;
 
-    // Slave the muted video to the audio clock (M3 refines with VIDEOGAP).
+    // Slave the muted video to the audio clock.
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
-      const target = audio.currentTime + timing.videoGapSec;
+      const target = audio.currentTime + timing.videoGapSec + displayOffsetMs / 1000;
       if (Math.abs(video.currentTime - target) > 0.15) video.currentTime = target;
       if (audio.paused !== video.paused) {
         if (audio.paused) video.pause();
@@ -97,9 +119,9 @@
       });
     }
 
-    drawHud(ctx, t, w, h);
+    drawHud(ctx, rawT, w, h);
 
-    if (endMs !== undefined && t >= endMs) finish();
+    if (endMs !== undefined && rawT >= endMs) finish();
   }
 
   function drawHud(ctx: CanvasRenderingContext2D, t: number, w: number, h: number) {
@@ -190,6 +212,14 @@
       case "ArrowRight":
         seek(5);
         break;
+      case "+":
+      case "=":
+        adjustOffset(50);
+        break;
+      case "-":
+      case "_":
+        adjustOffset(-50);
+        break;
       case "Escape":
         finish();
         break;
@@ -256,6 +286,7 @@
     // in a .mp3). Convert once with ffmpeg and play the cached result.
     if (!triedAudioTranscode && loaded.audioFileName) {
       triedAudioTranscode = true;
+      clearTimeout(noticeTimer);
       notice = "Converting audio…";
       void transcodeAudioToMp3(loaded.dir, loaded.audioFileName)
         .then((url) => {
@@ -314,7 +345,10 @@
     <div class="overlay">
       <div class="pause-box">
         <h2>{song.artist} – {song.title}</h2>
-        <p>Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; Esc: quit</p>
+        <p>
+          Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; +/−: display offset
+          ({displayOffsetMs} ms) &nbsp;·&nbsp; Esc: quit
+        </p>
       </div>
     </div>
   {/if}
