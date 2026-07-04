@@ -1,6 +1,8 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { exists } from "@tauri-apps/plugin-fs";
 import { Command } from "@tauri-apps/plugin-shell";
+import { TARGET_LUFS, type Loudness } from "./gain";
+import { parseLoudnormJson } from "./loudnorm";
 
 /**
  * Media the WebView cannot decode (MPEG Layer II posing as .mp3, avi/xvid
@@ -41,11 +43,27 @@ export async function transcodeVideoToMp4(dir: string, fileName: string): Promis
   return convertFileSrc(outPath);
 }
 
-async function runFfmpeg(args: string[]): Promise<void> {
+/** Measures integrated loudness (EBU R128) of a media file's audio track. */
+export async function measureLoudness(filePath: string): Promise<Loudness> {
+  const result = await runFfmpeg([
+    "-hide_banner",
+    "-nostats",
+    "-i", filePath,
+    "-map", "a:0",
+    "-vn",
+    "-af", `loudnorm=I=${TARGET_LUFS}:TP=-1.5:LRA=11:print_format=json`,
+    "-f", "null",
+    "-",
+  ]);
+  return parseLoudnormJson(result.stderr);
+}
+
+async function runFfmpeg(args: string[]): Promise<{ stderr: string }> {
   const result = await Command.sidecar("binaries/ffmpeg", args).execute();
   if (result.code !== 0) {
     throw new Error(`ffmpeg exited with ${result.code}: ${result.stderr.slice(-500)}`);
   }
+  return { stderr: result.stderr };
 }
 
 function stripExt(fileName: string): string {

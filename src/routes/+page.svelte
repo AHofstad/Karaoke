@@ -6,7 +6,9 @@
   import Sing from "$lib/screens/Sing.svelte";
   import SongList from "$lib/screens/SongList.svelte";
   import { scanLibrary, type LibraryEntry } from "$lib/library/scanner";
+  import { getGainFor, initLoudness, prioritize, setSinging } from "$lib/library/loudness";
   import { loadSong, type LoadedSong } from "$lib/playback/media";
+  import { SvelteSet } from "svelte/reactivity";
   import {
     addToQueue,
     clearQueue,
@@ -34,6 +36,11 @@
   let playing = false; // mirror of `loaded` readable inside event callbacks
   let advancing = false; // guards against concurrent queue advances
   let playCounter = $state(0); // forces <Sing> remount per played song
+  let gain = $state(1); // normalization gain for the loaded song
+  const played = new SvelteSet<string>(); // txtPaths sung this session
+
+  // Pause background loudness measurement while a song plays.
+  $effect(() => setSinging(loaded !== null));
 
   async function rescan(rootDir: string) {
     scanning = true;
@@ -42,6 +49,7 @@
       entries = await scanLibrary(rootDir);
       localStorage.setItem(ROOT_KEY, rootDir);
       await publishLibrary(entries);
+      initLoudness(entries);
       await refreshQueue();
     } catch (e) {
       error = `Scan failed: ${e}`;
@@ -58,6 +66,12 @@
   async function refreshQueue() {
     try {
       queue = await getQueue();
+      // Queued songs (from desktop or phone) get measured first. Reversed so
+      // the front of the queue ends up at the front of the measurement line.
+      for (let i = queue.queue.length - 1; i >= 0; i--) {
+        const txtPath = entries[queue.queue[i].song.id]?.txtPath;
+        if (txtPath) prioritize(txtPath);
+      }
     } catch {
       // remote state not ready yet
     }
@@ -70,6 +84,8 @@
       const next = await nextInQueue();
       if (next) {
         loaded = await loadSong(next.txtPath);
+        gain = getGainFor(next.txtPath);
+        played.add(next.txtPath);
         playCounter++;
         playing = true;
       } else {
@@ -151,7 +167,7 @@
 
 {#if loaded}
   {#key playCounter}
-    <Sing {loaded} onExit={exitToList} onSkip={songFinished} />
+    <Sing {loaded} {gain} onExit={exitToList} onSkip={songFinished} />
   {/key}
 {:else if intermission}
   <Intermission queue={queue.queue} />
@@ -159,6 +175,7 @@
   <SongList
     {entries}
     {scanning}
+    {played}
     queue={queue.queue}
     remoteUrl={remoteInfo?.url ?? null}
     {qrDataUrl}

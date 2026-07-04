@@ -11,6 +11,7 @@ use axum::response::{Html, IntoResponse};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -55,6 +56,8 @@ pub struct RemoteState {
     pub now_playing: Option<QueueItem>,
     /// Time left in the playing song, pushed periodically by the desktop.
     pub now_remaining_ms: Option<f64>,
+    /// txt paths of songs played this session (survives rescans, not restarts).
+    pub played: HashSet<String>,
     pub port: u16,
 }
 
@@ -80,6 +83,7 @@ pub fn start(app: AppHandle, state: SharedState) {
             .route("/api/queue", get(queue_get).post(queue_post))
             .route("/api/queue/{uid}", delete(queue_delete))
             .route("/api/skip", post(skip))
+            .route("/api/played", get(played))
             .route("/api/cover/{id}", get(cover))
             .with_state(ctx);
 
@@ -200,6 +204,18 @@ async fn queue_delete(State(ctx): State<ServerCtx>, Path(uid): Path<u64>) -> Jso
     };
     let _ = ctx.app.emit("queue-updated", ());
     Json(view)
+}
+
+/// Ids of songs already sung this session, for the phone's ✓ marker.
+async fn played(State(ctx): State<ServerCtx>) -> Json<Vec<usize>> {
+    let state = ctx.state.lock().unwrap();
+    let ids = state
+        .library
+        .iter()
+        .filter(|s| state.played.contains(&s.txt_path))
+        .map(|s| s.id)
+        .collect();
+    Json(ids)
 }
 
 async fn skip(State(ctx): State<ServerCtx>) -> StatusCode {
@@ -352,6 +368,7 @@ pub fn queue_next(app: AppHandle, state: tauri::State<'_, SharedState>) -> Optio
             None
         } else {
             let item = s.queue.remove(0);
+            s.played.insert(item.song.txt_path.clone());
             s.now_playing = Some(item.clone());
             s.now_remaining_ms = Some(item.song.duration_ms);
             let txt_path = item.song.txt_path.clone();

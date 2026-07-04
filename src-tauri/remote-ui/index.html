@@ -32,6 +32,7 @@
   .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .a { color: #9aa3b8; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .badge { font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #0c0e16; color: #ff7ab0; margin-left: 4px; }
+  .done { color: #7fce7f; margin-left: 4px; font-size: 0.85em; }
   button {
     border: none; border-radius: 8px; padding: 0.55em 1em;
     background: #37b6ff; color: #062033; font-weight: 700; font-size: 0.95rem;
@@ -101,6 +102,7 @@
 <script>
   const $ = (id) => document.getElementById(id);
   let songs = [];
+  let played = new Set();
 
   const savedName = localStorage.getItem("karaoke.singer") || "";
   $("singer").value = savedName;
@@ -145,6 +147,7 @@
       t.className = "t";
       t.textContent = s.title;
       if (s.isDuet) { const b = document.createElement("span"); b.className = "badge"; b.textContent = "DUET"; t.appendChild(b); }
+      if (played.has(s.id)) { const d = document.createElement("span"); d.className = "done"; d.textContent = "✓"; d.title = "Already sung"; t.appendChild(d); }
       const a = document.createElement("div");
       a.className = "a";
       a.textContent = s.artist;
@@ -181,7 +184,18 @@
     } catch { toast("Could not load songs"); }
   }
 
+  async function refreshPlayed() {
+    try {
+      const ids = await (await fetch("/api/played")).json();
+      if (ids.length !== played.size) {
+        played = new Set(ids);
+        render();
+      }
+    } catch { /* server briefly unreachable */ }
+  }
+
   async function refreshQueue() {
+    refreshPlayed();
     try {
       const q = await (await fetch("/api/queue")).json();
       $("np").textContent = q.nowPlaying

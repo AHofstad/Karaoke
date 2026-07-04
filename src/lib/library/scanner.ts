@@ -10,6 +10,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { decodeSongText } from "../parser/encoding";
 import { isUltraStarChart, msAtBeat, parseUltraStar } from "../parser/ultrastar";
+import type { Loudness } from "../playback/gain";
 import { findFileFuzzy } from "../playback/media";
 
 export interface LibraryEntry {
@@ -26,6 +27,8 @@ export interface LibraryEntry {
   creator?: string;
   /** Free-form labels from #TAGS / #GENRE, searchable. */
   tags?: string;
+  /** Measured integrated loudness; missing until the background batch gets to it. */
+  loudness?: Loudness;
 }
 
 interface TxtFileStat {
@@ -86,6 +89,17 @@ export async function scanLibrary(rootDir: string): Promise<LibraryEntry[]> {
   });
 
   await saveCache({ version: CACHE_VERSION, songs: nextSongs });
+
+  // Measured LUFS values live in a Rust-owned loudness.json (see loudness.rs).
+  try {
+    const loudnessMap = await invoke<Record<string, Loudness>>("load_loudness");
+    for (const e of entries) {
+      const l = loudnessMap[e.txtPath];
+      if (l) e.loudness = l;
+    }
+  } catch (e) {
+    console.warn("could not load loudness store:", e);
+  }
 
   const unique = dedupeEntries(entries);
   unique.sort((a, b) => (a.artist + a.title).localeCompare(b.artist + b.title, undefined, { sensitivity: "base" }));

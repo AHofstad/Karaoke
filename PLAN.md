@@ -162,7 +162,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 
 ## Current state (read this first in a new session)
 
-**Version 0.4.0 shipped** — `dist\Karaoke_0.4.0_x64-setup.exe` (28.8 MB) + `dist\Karaoke_0.4.0_portable.zip` (40.7 MB). All milestones M0–M7 done. 100 tests green (`npm test`). Release via `.\scripts\release.ps1` (auto-updates the ffmpeg sidecar from gyan.dev each run; works in PowerShell 5.1 and 7). Publisher: "Weebs Software Inc.". App icon from `assets\icon-source.jpg` (rounded corners; regenerate: `npm run tauri icon assets/icon-source.jpg`). Rust edition 2024.
+**Version 0.4.0 shipped** — `dist\Karaoke_0.4.0_x64-setup.exe` (28.8 MB) + `dist\Karaoke_0.4.0_portable.zip` (40.7 MB). All milestones M0–M7 done. 118 tests green (`npm test`). Release via `.\scripts\release.ps1` (auto-updates the ffmpeg sidecar from gyan.dev each run; works in PowerShell 5.1 and 7). Publisher: "Weebs Software Inc.". App icon from `assets\icon-source.jpg` (rounded corners; regenerate: `npm run tauri icon assets/icon-source.jpg`). Rust edition 2024.
 
 ### Features beyond the original plan (all user-requested, all shipped)
 
@@ -190,6 +190,10 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - Search matches artist, title, creator (#CREATOR/#AUTHOR), tags (#TAGS) and genre (#GENRE); case-, width- (CJK) and diacritic-insensitive
 - Header row fixed above the scrolling grid; sidebar: centered Phone remote (QR + URL) on top, Queue below with pinned "▶ Play queue" (disabled when empty) and a Clear button; sidebar width draggable 220–600 px, persisted
 - F11 fullscreen everywhere
+- Session "PLAYED" badge on cards (green, in-memory only, resets on restart)
+- **Loudness normalization**: background ffmpeg `loudnorm` measurement (LUFS) of every song after scan — 1 process at a time, paused while a song plays, queued songs jump to the front of the line; results persisted per measurement to `%APPDATA%\com.light.karaoke\loudness.json` via the Rust `save_loudness` command (restart resumes mid-batch). Playback applies `element.volume = clamp(10^((-18 − LUFS)/20), 0.05, 1)` — attenuate-only (target −18 LUFS because YouTube rips sit at ≈−14; quieter songs play at 1.0 unchanged). Header shows "Normalizing volume… X / Y" progress bar until done. Key files: `src/lib/playback/gain.ts`, `src/lib/playback/loudnorm.ts` (stderr JSON parser), `src/lib/library/loudness.ts` (TS scheduler), `measureLoudness` in `transcode.ts`, `src-tauri/src/loudness.rs` (persistence).
+  **Hard-won gotcha:** persistence originally went through JS plugin-fs read-modify-write of scan-cache.json — invoke *responses* can be silently dropped while the webview is saturated right after startup (covers loading), leaving awaits pending forever even though the Rust side executed. Anything that must survive during busy phases: use a fire-and-forget Rust command, never chained JS fs I/O.
+- Phone remote shows a small green ✓ after titles of songs already sung this session (`GET /api/played`, polled with the queue; Rust tracks played txt-paths in `queue_next`)
 
 **Queue + phone remote**
 - Desktop is the only place playback starts (Play queue); phone adds never auto-play
@@ -208,4 +212,6 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 ## Progress log
 
 - 2026-07-03 — Plan written; corpus audited; stack chosen (Tauri 2 + TS). M0–M2 built and user-verified same day (parser with 47-file golden corpus, audio + syllable-fill lyrics).
+- 2026-07-03 — Loudness normalization (background LUFS batch + volume gain, −18 LUFS target, progress bar in library header) and session PLAYED badge. 118 tests green. Not yet user-verified by ear; manual checklist in `.claude/plans/what-things-to-add-sprightly-dusk.md`.
+- 2026-07-04 — Fixed "normalization restarts from zero after app restart": persistence moved from JS scan-cache writes (invoke responses silently dropped under startup load → nothing ever hit disk) to Rust `save_loudness` → loudness.json; restart-resume verified live (killed at 23 measured, resumed at 24 six seconds after relaunch). Added ✓ played marker to the phone page (`/api/played`).
 - 2026-07-03 — Playback hardening from live user testing (autoplay policy, mp3 sanitizer, ffmpeg sidecar transcode = M3.5 pulled forward). M5 library, M6 queue + LAN remote (phone-verified), M7 packaging all landed. Releases 0.1.0 → 0.4.0 shipped through `scripts\release.ps1`. Feature list above grew through ~30 user feedback rounds in the same session.

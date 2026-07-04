@@ -1,11 +1,14 @@
 <script lang="ts">
   import type { LibraryEntry } from "../library/scanner";
   import { filterEntries } from "../library/scanner";
+  import { loudnessProgress } from "../library/loudness";
   import type { QueueItem } from "../queue/queue";
+  import type { SvelteSet } from "svelte/reactivity";
 
   let {
     entries,
     queue,
+    played,
     remoteUrl,
     qrDataUrl,
     onQueueAdd,
@@ -17,6 +20,7 @@
   }: {
     entries: LibraryEntry[];
     queue: QueueItem[];
+    played: SvelteSet<string>;
     remoteUrl: string | null;
     qrDataUrl: string;
     onQueueAdd: (entry: LibraryEntry) => void;
@@ -61,6 +65,14 @@
     <header>
       <h1>Karaoke</h1>
       <input type="search" placeholder="Search artist or title…" bind:value={query} />
+      {#if $loudnessProgress.total > 0 && $loudnessProgress.done < $loudnessProgress.total}
+        <div class="normalize" title="Measuring song volume in the background so all songs play equally loud">
+          <span>Normalizing volume… {$loudnessProgress.done} / {$loudnessProgress.total}</span>
+          <div class="track">
+            <div class="fill" style="width: {(100 * $loudnessProgress.done) / $loudnessProgress.total}%"></div>
+          </div>
+        </div>
+      {/if}
       <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
     </header>
 
@@ -83,6 +95,7 @@
               <div class="placeholder">♪</div>
             {/if}
             <div class="badges">
+              {#if played.has(entry.txtPath)}<span class="badge played">PLAYED</span>{/if}
               {#if entry.isDuet}<span class="badge duet">DUET</span>{/if}
               {#if entry.hasVideo}<span class="badge video">VIDEO</span>{/if}
             </div>
@@ -269,6 +282,29 @@
   }
   .badge.video {
     color: #37b6ff;
+  }
+  .badge.played {
+    color: #7fce7f;
+  }
+  .normalize {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 12rem;
+    color: #9aa3b8;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .track {
+    height: 4px;
+    border-radius: 2px;
+    background: #2a2f45;
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    background: #37b6ff;
+    transition: width 0.3s ease;
   }
   .meta {
     display: flex;

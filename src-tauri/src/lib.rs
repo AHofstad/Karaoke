@@ -1,3 +1,4 @@
+mod loudness;
 mod remote;
 mod scan;
 
@@ -13,6 +14,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .manage(state.clone())
+        .manage(loudness::LoudnessStore::default())
         .setup(move |app| {
             remote::start(app.handle().clone(), state);
             Ok(())
@@ -28,6 +30,8 @@ pub fn run() {
             remote::playing_stopped,
             remote::set_progress,
             scan::scan_txt_files,
+            loudness::load_loudness,
+            loudness::save_loudness,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,9 +9,10 @@
 
   let {
     loaded,
+    gain = 1,
     onExit,
     onSkip,
-  }: { loaded: LoadedSong; onExit: () => void; onSkip: () => void } = $props();
+  }: { loaded: LoadedSong; gain?: number; onExit: () => void; onSkip: () => void } = $props();
 
   let canvas: HTMLCanvasElement;
   let audio: HTMLAudioElement | undefined = $state();
@@ -31,6 +32,13 @@
   let blobUrl: string | undefined;
   let notice = $state("");
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Loudness normalization: element volume survives the blob/transcode src
+  // swaps (same element), and setting both covers video-master songs.
+  $effect(() => {
+    if (audio) audio.volume = gain;
+    if (video) video.volume = gain;
+  });
 
   // Display latency compensation (beamers/TVs delay the image while audio
   // plays immediately). Positive = draw lyrics/video this many ms earlier.
