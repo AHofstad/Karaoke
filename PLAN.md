@@ -162,7 +162,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 
 ## Current state (read this first in a new session)
 
-**Version 0.4.0 shipped** — `dist\Karaoke_0.4.0_x64-setup.exe` (28.8 MB) + `dist\Karaoke_0.4.0_portable.zip` (40.7 MB). All milestones M0–M7 done. 118 tests green (`npm test`). Release via `.\scripts\release.ps1` (auto-updates the ffmpeg sidecar from gyan.dev each run; works in PowerShell 5.1 and 7). Publisher: "Weebs Software Inc.". App icon from `assets\icon-source.jpg` (rounded corners; regenerate: `npm run tauri icon assets/icon-source.jpg`). Rust edition 2024.
+**Version 0.6.0 shipped** — `dist\Karaoke_0.6.0_x64-setup.exe` (28.8 MB) + `dist\Karaoke_0.6.0_portable.zip` (40.8 MB). All milestones M0–M7 done. 118 tests green (`npm test`). Release via `.\scripts\release.ps1` (auto-updates the ffmpeg sidecar from gyan.dev each run; works in PowerShell 5.1 and 7). Publisher: "Weebs Software Inc.". App icon from `assets\icon-source.jpg` (rounded corners; regenerate: `npm run tauri icon assets/icon-source.jpg`). Rust edition 2024.
 
 ### Features beyond the original plan (all user-requested, all shipped)
 
@@ -215,3 +215,4 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - 2026-07-03 — Playback hardening from live user testing (autoplay policy, mp3 sanitizer, ffmpeg sidecar transcode = M3.5 pulled forward). M5 library, M6 queue + LAN remote (phone-verified), M7 packaging all landed. Releases 0.1.0 → 0.4.0 shipped through `scripts\release.ps1`. Feature list above grew through ~30 user feedback rounds in the same session.
 - 2026-07-03 — Loudness normalization (background LUFS batch + volume gain, −18 LUFS target, progress bar in library header) and session PLAYED badge. 118 tests green. Not yet user-verified by ear; manual checklist in `.claude/plans/what-things-to-add-sprightly-dusk.md`.
 - 2026-07-04 — Fixed "normalization restarts from zero after app restart": persistence moved from JS scan-cache writes (invoke responses silently dropped under startup load → nothing ever hit disk) to Rust `save_loudness` → loudness.json; restart-resume verified live (killed at 23 measured, resumed at 24 six seconds after relaunch). Added ✓ played marker to the phone page (`/api/played`).
+- 2026-07-05 — Version 0.6.0 built and shipped (`dist\Karaoke_0.6.0_x64-setup.exe` + portable zip). 118 tests green.
