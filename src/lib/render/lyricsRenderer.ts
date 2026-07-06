@@ -121,7 +121,7 @@ export class LyricsLane {
       const noteEnd = msAtBeat(this.timing, note.startBeat + note.lengthBeats);
       const x = left + box.x;
       const active = nowMs >= noteStart && nowMs < noteEnd;
-      const fontSize = active ? layout.fontSize * 1.08 : layout.fontSize;
+      const fontSize = active ? layout.fontSize * 1.035 : layout.fontSize;
       ctx.font = lyricFont(fontSize, note.type === "freestyle");
 
       // Base (unsung) text with outline for readability over video.
