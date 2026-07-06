@@ -102,20 +102,29 @@
   }
 
   let intermission = $state(false);
+  // True for the whole between-songs async gap (loaded cleared, next song/queue
+  // state not resolved yet) so the library screen's {:else} branch never
+  // flashes on screen while refreshQueue()/playNext() are still in flight.
+  let transitioning = $state(false);
   let intermissionTimer: ReturnType<typeof setTimeout> | undefined;
 
   async function songFinished() {
     // Natural end or skip: show the upcoming queue briefly, then continue.
+    transitioning = true;
     loaded = null;
-    await refreshQueue();
-    if (queue.queue.length > 0) {
-      intermission = true;
-      intermissionTimer = setTimeout(() => {
-        intermission = false;
-        void playNext();
-      }, 3000);
-    } else {
-      await playNext();
+    try {
+      await refreshQueue();
+      if (queue.queue.length > 0) {
+        intermission = true;
+        intermissionTimer = setTimeout(() => {
+          intermission = false;
+          void playNext();
+        }, 3000);
+      } else {
+        await playNext();
+      }
+    } finally {
+      transitioning = false;
     }
   }
 
@@ -171,6 +180,8 @@
   {/key}
 {:else if intermission}
   <Intermission queue={queue.queue} />
+{:else if transitioning}
+  <!-- between-songs gap: nothing to show yet, avoids flashing the library screen -->
 {:else}
   <SongList
     {entries}
