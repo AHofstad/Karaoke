@@ -119,7 +119,12 @@
         intermission = true;
         intermissionTimer = setTimeout(() => {
           intermission = false;
-          void playNext();
+          // Cover the gap between the intermission ending and the next song
+          // actually being loaded — same reason transitioning exists above.
+          transitioning = true;
+          void playNext().finally(() => {
+            transitioning = false;
+          });
         }, 3000);
       } else {
         await playNext();
