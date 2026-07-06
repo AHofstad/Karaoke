@@ -123,8 +123,10 @@
           </div>
         </div>
       {/if}
-      <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
-      <button class="folder" onclick={openAppData}>Open app data folder…</button>
+      <div class="folder-buttons">
+        <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
+        <button class="folder" onclick={openAppData}>Open app data folder…</button>
+      </div>
     </header>
 
     <div class="scroll">
@@ -266,8 +268,13 @@
   input:focus {
     outline: 2px solid #37b6ff;
   }
-  .folder {
+  .folder-buttons {
     margin-left: auto;
+    display: flex;
+    gap: 0.6rem;
+    flex: none;
+  }
+  .folder {
     background: none;
     border: 1px solid #2a2f45;
     color: #9aa3b8;
