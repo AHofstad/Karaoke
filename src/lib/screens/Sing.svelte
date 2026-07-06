@@ -4,15 +4,22 @@
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { findInstrumentalGaps, songEndMs, timePhrases, type TimeRange } from "../playback/clock";
   import { msAtBeat } from "../parser/ultrastar";
-  import { reportProgress } from "../queue/queue";
+  import { formatEta, queueEtas, reportProgress, type QueueItem } from "../queue/queue";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
 
   let {
     loaded,
     gain = 1,
+    queue = [],
     onExit,
     onSkip,
-  }: { loaded: LoadedSong; gain?: number; onExit: () => void; onSkip: () => void } = $props();
+  }: {
+    loaded: LoadedSong;
+    gain?: number;
+    queue?: QueueItem[];
+    onExit: () => void;
+    onSkip: () => void;
+  } = $props();
 
   let canvas: HTMLCanvasElement;
   let audio: HTMLAudioElement | undefined = $state();
@@ -23,6 +30,9 @@
   // is still pinned at 0 during the pre-playback window.
   let playbackStarted = $state(false);
   let confirmingQuit = $state(false);
+  let queueOpen = $state(false);
+  let sidebarRemainingMs = $state(0);
+  const sidebarEtas = $derived(queueEtas(queue, sidebarRemainingMs));
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
@@ -171,6 +181,11 @@
     }
 
     drawHud(ctx, rawT, w, h);
+
+    if (queueOpen) {
+      const d = currentDurationMs();
+      sidebarRemainingMs = Number.isFinite(d) ? Math.max(0, d - rawT) : 0;
+    }
 
     if (endMs !== undefined && rawT >= endMs) finish();
   }
@@ -323,6 +338,10 @@
       case "f":
       case "F":
         toggleSyllableFill();
+        break;
+      case "q":
+      case "Q":
+        queueOpen = !queueOpen;
         break;
       case "Tab":
         e.preventDefault();
@@ -534,6 +553,7 @@
             <tr><td><kbd>Tab</kbd></td><td>Skip instrumental / next song</td></tr>
             <tr><td><kbd>+</kbd> / <kbd>−</kbd></td><td>Display offset (currently {displayOffsetMs} ms)</td></tr>
             <tr><td><kbd>F</kbd></td><td>Syllable fill (currently {instantSyllableFill ? "instant" : "progressive"})</td></tr>
+            <tr><td><kbd>Q</kbd></td><td>Toggle queue panel (currently {queueOpen ? "open" : "closed"})</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>Quit to library</td></tr>
           </tbody>
         </table>
@@ -547,7 +567,7 @@
           Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; Tab: skip &nbsp;·&nbsp; +/−:
           display offset ({displayOffsetMs} ms) &nbsp;·&nbsp; F: syllable fill ({instantSyllableFill
             ? "instant"
-            : "progressive"}) &nbsp;·&nbsp; Esc: quit
+            : "progressive"}) &nbsp;·&nbsp; Q: queue &nbsp;·&nbsp; Esc: quit
         </p>
       </div>
     </div>
@@ -559,6 +579,31 @@
 
   {#if notice}
     <div class="notice">{notice}</div>
+  {/if}
+
+  {#if queueOpen}
+    <div class="queue-panel">
+      <h3>Up next <span class="hint">Q to close</span></h3>
+      {#if queue.length === 0}
+        <p class="empty">Queue is empty.</p>
+      {:else}
+        <ol>
+          {#each queue.slice(0, 8) as item, i (item.uid)}
+            <li>
+              <span class="pos">{i + 1}</span>
+              <span class="text">
+                <span class="title">{item.song.title}</span>
+                <span class="artist">{item.song.artist}{item.singer ? ` — ${item.singer}` : ""}</span>
+              </span>
+              <span class="eta">{formatEta(sidebarEtas[i])}</span>
+            </li>
+          {/each}
+        </ol>
+        {#if queue.length > 8}
+          <p class="more">…and {queue.length - 8} more</p>
+        {/if}
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -668,5 +713,85 @@
     background: rgba(0, 0, 0, 0.65);
     color: #ffcf40;
     font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  .queue-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100%;
+    background: #12151f;
+    border-left: 1px solid #2a2f45;
+    display: flex;
+    flex-direction: column;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #eee;
+    z-index: 100;
+  }
+  .queue-panel h3 {
+    margin: 0;
+    padding: 1.2rem 1rem;
+    font-size: 1.1rem;
+    border-bottom: 1px solid #2a2f45;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .queue-panel .hint {
+    font-size: 0.75rem;
+    color: #9aa3b8;
+    font-weight: 400;
+  }
+  .queue-panel ol {
+    flex: 1;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .queue-panel li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    background: #1a1e2e;
+    border: 1px solid #2a2f45;
+    border-radius: 8px;
+    padding: 0.5rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  .queue-panel .pos {
+    color: #37b6ff;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+  .queue-panel .title {
+    font-weight: 600;
+    word-break: break-word;
+    font-size: 0.95rem;
+  }
+  .queue-panel .artist {
+    color: #9aa3b8;
+    font-size: 0.8rem;
+    word-break: break-word;
+  }
+  .queue-panel .eta {
+    color: #ffcf40;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .queue-panel .empty {
+    color: #9aa3b8;
+    padding: 1rem;
+    text-align: center;
+  }
+  .queue-panel .more {
+    color: #9aa3b8;
+    font-size: 0.85rem;
+    padding: 0.4rem 0.6rem;
+    text-align: center;
   }
 </style>

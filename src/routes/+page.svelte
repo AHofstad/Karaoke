@@ -182,7 +182,7 @@
 
 {#if loaded}
   {#key playCounter}
-    <Sing {loaded} {gain} onExit={exitToList} onSkip={songFinished} />
+    <Sing {loaded} {gain} queue={queue.queue} onExit={exitToList} onSkip={songFinished} />
   {/key}
 {:else if intermission}
   <Intermission queue={queue.queue} />
