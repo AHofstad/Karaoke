@@ -526,8 +526,17 @@
     <div class="overlay dim">
       <div class="dialog">
         <h2>QUIT THIS SONG?</h2>
-        <p><kbd>Esc</kbd> Quit</p>
-        <p><kbd>Any other key</kbd> Keep singing</p>
+        <p><kbd>Esc</kbd> Quit &nbsp;·&nbsp; <kbd>Any other key</kbd> Keep singing</p>
+        <table class="shortcuts">
+          <tbody>
+            <tr><td><kbd>Space</kbd></td><td>Pause / resume</td></tr>
+            <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Seek ±5s</td></tr>
+            <tr><td><kbd>Tab</kbd></td><td>Skip instrumental / next song</td></tr>
+            <tr><td><kbd>+</kbd> / <kbd>−</kbd></td><td>Display offset (currently {displayOffsetMs} ms)</td></tr>
+            <tr><td><kbd>F</kbd></td><td>Syllable fill (currently {instantSyllableFill ? "instant" : "progressive"})</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Quit to library</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   {:else if paused}
@@ -631,6 +640,24 @@
     font-family: inherit;
     color: #37b6ff;
     font-weight: 600;
+  }
+  .shortcuts {
+    margin: 1.4rem auto 0;
+    border-collapse: separate;
+    border-spacing: 0 0.5rem;
+    text-align: left;
+  }
+  .shortcuts td {
+    font-size: 1.05rem;
+    color: #c8cede;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+  }
+  .shortcuts td:first-child {
+    text-align: right;
+  }
+  .shortcuts td:last-child {
+    white-space: normal;
   }
   .notice {
     position: absolute;
