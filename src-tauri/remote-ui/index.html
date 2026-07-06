@@ -31,6 +31,7 @@
   .meta { flex: 1; min-width: 0; }
   .t { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .a { color: #9aa3b8; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dur { color: #6b7690; font-size: 0.75rem; font-variant-numeric: tabular-nums; }
   .badge { font-size: 0.6rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #0c0e16; color: #ff7ab0; margin-left: 4px; }
   .done { color: #7fce7f; margin-left: 4px; font-size: 0.85em; }
   button {
@@ -153,6 +154,13 @@
       a.className = "a";
       a.textContent = s.artist;
       meta.append(t, a);
+      if (s.durationMs) {
+        const dur = document.createElement("div");
+        dur.className = "dur";
+        const sec = Math.max(0, Math.round(s.durationMs / 1000));
+        dur.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+        meta.append(dur);
+      }
       const btn = document.createElement("button");
       btn.textContent = "Queue";
       btn.onclick = async () => {

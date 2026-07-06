@@ -11,6 +11,13 @@
     await openPath(await appDataDir());
   }
 
+  function formatDuration(ms: number): string {
+    const totalSec = Math.max(0, Math.round(ms / 1000));
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${String(sec).padStart(2, "0")}`;
+  }
+
   let {
     entries,
     queue,
@@ -111,6 +118,7 @@
             <div class="text">
               <div class="title">{entry.title}</div>
               <div class="artist">{entry.artist}</div>
+              <div class="duration">{formatDuration(entry.durationMs)}</div>
             </div>
           </div>
         </div>
@@ -331,6 +339,11 @@
     color: #9aa3b8;
     font-size: 0.85rem;
     word-break: break-word;
+  }
+  .duration {
+    color: #6b7690;
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
   }
   .divider {
     cursor: col-resize;
