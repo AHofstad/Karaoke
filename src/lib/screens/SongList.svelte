@@ -46,41 +46,6 @@
     scanning: boolean;
   } = $props();
 
-  // Drag-to-reorder the queue (native HTML5 DnD, dragged from the handle).
-  let draggedUid: number | null = $state(null);
-  let dragOverIndex: number | null = $state(null);
-
-  function onQueueDragStart(e: DragEvent, uid: number) {
-    draggedUid = uid;
-    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
-  }
-
-  function onQueueDragOver(e: DragEvent, index: number) {
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    dragOverIndex = index;
-  }
-
-  function onQueueDragEnd() {
-    draggedUid = null;
-    dragOverIndex = null;
-  }
-
-  function onQueueDrop(e: DragEvent, targetIndex: number) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (draggedUid != null) {
-      const fromIndex = queue.findIndex((i) => i.uid === draggedUid);
-      // Removing the dragged item shifts everything after it down by one, so
-      // a drop target past the drag origin needs its index adjusted to land
-      // in the visually-dropped slot rather than one past it.
-      const adjusted = fromIndex >= 0 && fromIndex < targetIndex ? targetIndex - 1 : targetIndex;
-      onQueueMove(draggedUid, adjusted);
-    }
-    draggedUid = null;
-    dragOverIndex = null;
-  }
-
   let query = $state("");
   const filtered = $derived(filterEntries(entries, query));
 
@@ -201,18 +166,23 @@
     {#if queue.length === 0}
       <p class="status">Empty. Click a song to add it, or scan the QR with your phone.</p>
     {:else}
-      <ol ondragover={(e) => onQueueDragOver(e, queue.length)} ondrop={(e) => onQueueDrop(e, queue.length)}>
+      <ol>
         {#each queue as item, index (item.uid)}
-          <li ondragover={(e) => onQueueDragOver(e, index)} ondrop={(e) => onQueueDrop(e, index)} class:drop-target={dragOverIndex === index}>
-            <span
-              class="handle"
-              role="button"
-              tabindex="0"
-              draggable="true"
-              ondragstart={(e) => onQueueDragStart(e, item.uid)}
-              ondragend={onQueueDragEnd}
-              title="Drag to reorder"
-            >⠿</span>
+          <li>
+            <div class="move">
+              <button
+                class="mv"
+                title="Move up"
+                disabled={index === 0}
+                onclick={() => onQueueMove(item.uid, index - 1)}
+              >▲</button>
+              <button
+                class="mv"
+                title="Move down"
+                disabled={index === queue.length - 1}
+                onclick={() => onQueueMove(item.uid, index + 1)}
+              >▼</button>
+            </div>
             <div class="qtext">
               <div class="title">{item.song.title}</div>
               <div class="artist">
@@ -437,16 +407,29 @@
     border-radius: 8px;
     padding: 0.45rem 0.55rem;
   }
-  li.drop-target {
-    border-color: #37b6ff;
-  }
-  .handle {
+  .move {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     flex: none;
-    color: #6b7690;
-    cursor: grab;
-    font-size: 1rem;
-    line-height: 1;
-    padding: 0 0.1rem;
+  }
+  .mv {
+    background: none;
+    border: 1px solid #2a2f45;
+    color: #9aa3b8;
+    border-radius: 5px;
+    padding: 0.05em 0.4em;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+  .mv:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+  .mv:not(:disabled):hover {
+    color: #37b6ff;
+    border-color: #37b6ff;
   }
   .qtext {
     flex: 1;
