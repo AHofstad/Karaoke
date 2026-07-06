@@ -205,10 +205,17 @@
     } catch { /* server briefly unreachable */ }
   }
 
+  // Guards against a slow, overlapping refresh (e.g. the 4s poll) resolving
+  // after a newer one (e.g. right after a drag reorder) and clobbering the
+  // list with stale data — only the most recently *started* call may render.
+  let queueGen = 0;
+
   async function refreshQueue() {
+    const gen = ++queueGen;
     refreshPlayed();
     try {
       const q = await (await fetch("/api/queue")).json();
+      if (gen !== queueGen) return; // superseded by a newer refresh
       $("np").textContent = q.nowPlaying
         ? q.nowPlaying.song.title + " — " + (q.nowPlaying.singer || q.nowPlaying.song.artist)
         : "Nothing playing";

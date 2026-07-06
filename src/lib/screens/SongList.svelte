@@ -48,15 +48,22 @@
 
   // Drag-to-reorder the queue (native HTML5 DnD, dragged from the handle).
   let draggedUid: number | null = $state(null);
+  let dragOverIndex: number | null = $state(null);
 
   function onQueueDragStart(e: DragEvent, uid: number) {
     draggedUid = uid;
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   }
 
-  function onQueueDragOver(e: DragEvent) {
+  function onQueueDragOver(e: DragEvent, index: number) {
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+    dragOverIndex = index;
+  }
+
+  function onQueueDragEnd() {
+    draggedUid = null;
+    dragOverIndex = null;
   }
 
   function onQueueDrop(e: DragEvent, targetIndex: number) {
@@ -71,6 +78,7 @@
       onQueueMove(draggedUid, adjusted);
     }
     draggedUid = null;
+    dragOverIndex = null;
   }
 
   let query = $state("");
@@ -193,15 +201,16 @@
     {#if queue.length === 0}
       <p class="status">Empty. Click a song to add it, or scan the QR with your phone.</p>
     {:else}
-      <ol ondragover={onQueueDragOver} ondrop={(e) => onQueueDrop(e, queue.length)}>
+      <ol ondragover={(e) => onQueueDragOver(e, queue.length)} ondrop={(e) => onQueueDrop(e, queue.length)}>
         {#each queue as item, index (item.uid)}
-          <li ondragover={onQueueDragOver} ondrop={(e) => onQueueDrop(e, index)} class:drop-target={draggedUid !== null && draggedUid !== item.uid}>
+          <li ondragover={(e) => onQueueDragOver(e, index)} ondrop={(e) => onQueueDrop(e, index)} class:drop-target={dragOverIndex === index}>
             <span
               class="handle"
               role="button"
               tabindex="0"
               draggable="true"
               ondragstart={(e) => onQueueDragStart(e, item.uid)}
+              ondragend={onQueueDragEnd}
               title="Drag to reorder"
             >⠿</span>
             <div class="qtext">

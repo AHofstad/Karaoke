@@ -15,6 +15,7 @@
         "title": "Karaoke",
         "width": 1280,
         "height": 720,
+        "dragDropEnabled": false,
         "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required"
       }
     ],
