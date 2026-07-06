@@ -29,6 +29,13 @@ export interface LaneOptions {
   centerY: number;
   colors: LaneColors;
   baseFontSize: number;
+  /**
+   * Whether the countdown dots may be drawn. False before real playback has
+   * begun (media currentTime pinned at 0) or while an autoplay-blocked pause
+   * overlay covers the canvas — otherwise the dots can appear frozen/hidden
+   * and look broken rather than simply not-yet-relevant.
+   */
+  showCountdown: boolean;
 }
 
 const NEXT_LINE_SCALE = 0.6;
@@ -77,7 +84,7 @@ export class LyricsLane {
     // Countdown dots: only for long silences (> 5s since the previous phrase
     // or song start), and only in the final 5 seconds — one dot per second,
     // reaching zero exactly when singing starts.
-    if (nowMs < current.startMs) {
+    if (opts.showCountdown && nowMs < current.startMs) {
       const prevEndMs = idx > 0 ? this.phrases[idx - 1].endMs : 0;
       const gapMs = current.startMs - prevEndMs;
       const remainingMs = current.startMs - nowMs;

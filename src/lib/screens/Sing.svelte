@@ -18,6 +18,10 @@
   let audio: HTMLAudioElement | undefined = $state();
   let video: HTMLVideoElement | undefined = $state();
   let paused = $state(false);
+  // False until the master element actually starts advancing (not just
+  // loaded/seeked) — the countdown dots are meaningless while currentTime
+  // is still pinned at 0 during the pre-playback window.
+  let playbackStarted = $state(false);
   let confirmingQuit = $state(false);
   let error = $state("");
   let videoFailed = $state(false);
@@ -123,23 +127,27 @@
     }
 
     const baseFontSize = Math.max(24, Math.round(h / 14));
+    const showCountdown = playbackStarted && !paused;
     if (lanes.length > 1) {
       // P1 bottom, P2 mid-screen; voices distinguished by color only.
       lanes[0].render(ctx, t, w, {
         centerY: h * 0.82,
         colors: SOLO_COLORS,
         baseFontSize,
+        showCountdown,
       });
       lanes[1].render(ctx, t, w, {
         centerY: h * 0.45,
         colors: DUET_P2_COLORS,
         baseFontSize,
+        showCountdown,
       });
     } else if (lanes.length === 1) {
       lanes[0].render(ctx, t, w, {
         centerY: h * 0.45,
         colors: SOLO_COLORS,
         baseFontSize,
+        showCountdown,
       });
     }
 
@@ -238,6 +246,7 @@
     if (m.paused) {
       void m.play();
       paused = false;
+      playbackStarted = true;
     } else {
       m.pause();
       paused = true;
@@ -340,15 +349,20 @@
     const m = master();
     if (!m) return;
     if (timing.startSec) m.currentTime = timing.startSec;
-    void m.play().catch((e) => {
-      // Autoplay can be blocked when too much time passed since the last user
-      // gesture (file dialog browsing). Fall back to the pause overlay.
-      if (e instanceof DOMException && e.name === "NotAllowedError") {
-        paused = true;
-      } else {
-        error = `Could not start playback: ${e}`;
-      }
-    });
+    void m
+      .play()
+      .then(() => {
+        playbackStarted = true;
+      })
+      .catch((e) => {
+        // Autoplay can be blocked when too much time passed since the last user
+        // gesture (file dialog browsing). Fall back to the pause overlay.
+        if (e instanceof DOMException && e.name === "NotAllowedError") {
+          paused = true;
+        } else {
+          error = `Could not start playback: ${e}`;
+        }
+      });
   }
 
   function onVideoError() {
