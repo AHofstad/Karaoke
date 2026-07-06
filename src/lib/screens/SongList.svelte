@@ -64,7 +64,7 @@
   <main>
     <header>
       <h1>Karaoke</h1>
-      <input type="search" placeholder="Search artist or title…" bind:value={query} />
+      <input type="search" placeholder="Search artist, title, tags…" bind:value={query} />
       {#if $loudnessProgress.total > 0 && $loudnessProgress.done < $loudnessProgress.total}
         <div class="normalize" title="Measuring song volume in the background so all songs play equally loud">
           <span>Normalizing volume… {$loudnessProgress.done} / {$loudnessProgress.total}</span>
