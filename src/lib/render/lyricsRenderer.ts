@@ -1,4 +1,4 @@
-import type { Note, SongTiming } from "../parser/types";
+import type { SongTiming } from "../parser/types";
 import type { TimedPhrase } from "../playback/clock";
 import { displayPhraseIndex } from "../playback/clock";
 import { msAtBeat } from "../parser/ultrastar";
@@ -9,22 +9,18 @@ export interface LaneColors {
   base: string;
   /** Sung/filling text. */
   sung: string;
-  /** Sung fill for golden notes. */
-  golden: string;
   outline: string;
 }
 
 export const SOLO_COLORS: LaneColors = {
   base: "#e8e8e8",
   sung: "#37b6ff",
-  golden: "#ffcf40",
   outline: "rgba(0,0,0,0.85)",
 };
 
 export const DUET_P2_COLORS: LaneColors = {
   base: "#e8e8e8",
   sung: "#ff7ab0",
-  golden: "#ffcf40",
   outline: "rgba(0,0,0,0.85)",
 };
 
@@ -156,7 +152,7 @@ export class LyricsLane {
           fontSize * 2.6,
         );
         ctx.clip();
-        ctx.fillStyle = isGolden(note) ? colors.golden : colors.sung;
+        ctx.fillStyle = colors.sung;
         ctx.fillText(note.text, x, centerY);
         ctx.restore();
       }
@@ -202,8 +198,4 @@ export class LyricsLane {
       ctx.fill();
     }
   }
-}
-
-function isGolden(note: Note): boolean {
-  return note.type === "golden" || note.type === "rapGolden";
 }
