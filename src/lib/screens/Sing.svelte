@@ -225,10 +225,12 @@
     ctx.fillText(text, barX + barW + 12, barY + barH / 2);
 
     // Outro: all lyrics sung, offer the skip shortcut next to the bar.
-    // Instrumental section: offer to jump ahead to the next vocal instead.
+    // Instrumental section: offer to jump ahead to the next vocal instead,
+    // but yield to the countdown dots in the final 5s rather than fighting
+    // them for the same space.
     const hint = lastLyricEndMs > 0 && t >= lastLyricEndMs
       ? "Tab: next song"
-      : currentGap
+      : currentGap && t < currentGap.endMs - 5000
         ? "Tab: skip instrumental"
         : null;
     if (hint) {
