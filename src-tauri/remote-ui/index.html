@@ -50,6 +50,8 @@
     background: #1a1e2e; border: 1px solid #2a2f45; border-radius: 10px;
     padding: 0.55rem 0.7rem; margin-bottom: 0.45rem;
   }
+  ol li .handle { color: #6b7690; flex: none; font-size: 1.1rem; padding: 0 0.2rem; touch-action: none; cursor: grab; }
+  ol li.dragging { opacity: 0.6; border-color: #37b6ff; }
   ol li .pos { color: #37b6ff; font-weight: 700; flex: none; width: 1.4em; }
   ol li .eta { color: #ffcf40; font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
   ol li .rm { flex: none; background: none; border: none; color: #9aa3b8; font-size: 1.3rem; padding: 0 0.3rem; }
@@ -212,6 +214,7 @@
         : "Nothing playing";
       $("qcount").textContent = q.queue.length ? "(" + q.queue.length + ")" : "";
 
+      if (dragActive) return; // don't overwrite the list under the user's finger
       const list = $("queuelist");
       list.innerHTML = "";
       // Estimated start: remaining time of the playing song plus durations
@@ -219,6 +222,10 @@
       let acc = q.remainingMs || 0;
       q.queue.forEach((item, i) => {
         const li = document.createElement("li");
+        li.dataset.uid = item.uid;
+        const handle = document.createElement("span");
+        handle.className = "handle";
+        handle.textContent = "⠿";
         const pos = document.createElement("span");
         pos.className = "pos";
         pos.textContent = i + 1;
@@ -247,11 +254,58 @@
           } catch { toast("Failed to remove"); }
           refreshQueue();
         };
-        li.append(pos, meta, eta, rm);
+        li.append(handle, pos, meta, eta, rm);
         list.appendChild(li);
+        handle.addEventListener("pointerdown", (e) => startDrag(e, li));
       });
       $("qempty").style.display = q.queue.length ? "none" : "block";
     } catch { /* server briefly unreachable */ }
+  }
+
+  // Pointer-based drag-to-reorder (native HTML5 DnD doesn't work well on touch).
+  let dragActive = false;
+  let dragLi = null;
+
+  function startDrag(e, li) {
+    e.preventDefault();
+    dragActive = true;
+    dragLi = li;
+    li.classList.add("dragging");
+    li.setPointerCapture(e.pointerId);
+    li.addEventListener("pointermove", onDragMove);
+    li.addEventListener("pointerup", onDragEnd);
+    li.addEventListener("pointercancel", onDragEnd);
+  }
+
+  function onDragMove(e) {
+    if (!dragLi) return;
+    const list = $("queuelist");
+    const under = document.elementFromPoint(e.clientX, e.clientY)?.closest("li");
+    if (!under || under === dragLi || under.parentElement !== list) return;
+    const rect = under.getBoundingClientRect();
+    const before = e.clientY < rect.top + rect.height / 2;
+    list.insertBefore(dragLi, before ? under : under.nextSibling);
+  }
+
+  async function onDragEnd(e) {
+    if (!dragLi) return;
+    dragLi.classList.remove("dragging");
+    dragLi.removeEventListener("pointermove", onDragMove);
+    dragLi.removeEventListener("pointerup", onDragEnd);
+    dragLi.removeEventListener("pointercancel", onDragEnd);
+    const list = $("queuelist");
+    const newIndex = Array.from(list.children).indexOf(dragLi);
+    const uid = dragLi.dataset.uid;
+    dragLi = null;
+    try {
+      await fetch("/api/queue/" + uid, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newIndex }),
+      });
+    } catch { toast("Failed to reorder"); }
+    dragActive = false;
+    refreshQueue();
   }
 
   $("search").addEventListener("input", render);

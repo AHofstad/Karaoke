@@ -81,7 +81,7 @@ pub fn start(app: AppHandle, state: SharedState) {
             .route("/", get(index))
             .route("/api/songs", get(songs))
             .route("/api/queue", get(queue_get).post(queue_post))
-            .route("/api/queue/{uid}", delete(queue_delete))
+            .route("/api/queue/{uid}", delete(queue_delete).patch(queue_patch))
             .route("/api/skip", post(skip))
             .route("/api/played", get(played))
             .route("/api/cover/{id}", get(cover))
@@ -200,6 +200,26 @@ async fn queue_delete(State(ctx): State<ServerCtx>, Path(uid): Path<u64>) -> Jso
     let view = {
         let mut state = ctx.state.lock().unwrap();
         state.queue.retain(|item| item.uid != uid);
+        queue_view(&state)
+    };
+    let _ = ctx.app.emit("queue-updated", ());
+    Json(view)
+}
+
+#[derive(Deserialize)]
+struct QueueMove {
+    #[serde(rename = "newIndex")]
+    new_index: usize,
+}
+
+async fn queue_patch(
+    State(ctx): State<ServerCtx>,
+    Path(uid): Path<u64>,
+    Json(body): Json<QueueMove>,
+) -> Json<QueueView> {
+    let view = {
+        let mut state = ctx.state.lock().unwrap();
+        move_item(&mut state.queue, uid, body.new_index);
         queue_view(&state)
     };
     let _ = ctx.app.emit("queue-updated", ());
@@ -341,6 +361,20 @@ pub fn queue_add_local(
 #[tauri::command]
 pub fn queue_remove(app: AppHandle, state: tauri::State<'_, SharedState>, uid: u64) {
     state.lock().unwrap().queue.retain(|item| item.uid != uid);
+    let _ = app.emit("queue-updated", ());
+}
+
+/// Move a queued item to a new position (drag-to-reorder, desktop or phone).
+fn move_item(queue: &mut Vec<QueueItem>, uid: u64, new_index: usize) {
+    if let Some(pos) = queue.iter().position(|item| item.uid == uid) {
+        let item = queue.remove(pos);
+        queue.insert(new_index.min(queue.len()), item);
+    }
+}
+
+#[tauri::command]
+pub fn queue_move(app: AppHandle, state: tauri::State<'_, SharedState>, uid: u64, new_index: usize) {
+    move_item(&mut state.lock().unwrap().queue, uid, new_index);
     let _ = app.emit("queue-updated", ());
 }
 

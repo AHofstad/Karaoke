@@ -14,6 +14,7 @@
     clearQueue,
     getQueue,
     getRemoteInfo,
+    moveInQueue,
     nextInQueue,
     onQueueUpdated,
     onRemoteSkip,
@@ -192,6 +193,7 @@
     {qrDataUrl}
     onQueueAdd={queueAdd}
     onQueueRemove={(uid) => void removeFromQueue(uid)}
+    onQueueMove={(uid, newIndex) => void moveInQueue(uid, newIndex)}
     onQueueClear={() => void clearQueue()}
     onPlayNext={() => void playNext()}
     onChangeFolder={pickFolder}

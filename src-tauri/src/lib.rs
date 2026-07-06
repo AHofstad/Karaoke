@@ -25,6 +25,7 @@ pub fn run() {
             remote::queue_snapshot,
             remote::queue_add_local,
             remote::queue_remove,
+            remote::queue_move,
             remote::queue_clear,
             remote::queue_next,
             remote::playing_stopped,

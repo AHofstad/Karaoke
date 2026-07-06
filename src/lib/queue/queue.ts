@@ -94,6 +94,8 @@ export const getQueue = () => invoke<QueueSnapshot>("queue_snapshot");
 export const addToQueue = (songId: number, singer?: string) =>
   invoke("queue_add_local", { songId, singer: singer ?? null });
 export const removeFromQueue = (uid: number) => invoke("queue_remove", { uid });
+export const moveInQueue = (uid: number, newIndex: number) =>
+  invoke("queue_move", { uid, newIndex });
 export const clearQueue = () => invoke("queue_clear");
 export const nextInQueue = () =>
   invoke<{ item: QueueItem; txtPath: string } | null>("queue_next");
