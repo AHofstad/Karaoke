@@ -328,8 +328,12 @@
           const m = master();
           if (m) {
             // Land 5s before the next vocal so the countdown dots play
-            // normally; clamp forward-only in case of a late press.
-            m.currentTime = Math.max(nowMs(), currentGap.endMs - 5000) / 1000;
+            // normally — but if we're already within that final stretch,
+            // clamping backward to "now" would make Tab a no-op (and the
+            // hint would keep showing with nothing happening on press), so
+            // jump straight to the vocal start instead.
+            const leadIn = currentGap.endMs - 5000;
+            m.currentTime = (leadIn > nowMs() ? leadIn : currentGap.endMs) / 1000;
           }
         } else {
           finish(); // skip to next in queue
