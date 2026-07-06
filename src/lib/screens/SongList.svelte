@@ -4,6 +4,12 @@
   import { loudnessProgress } from "../library/loudness";
   import type { QueueItem } from "../queue/queue";
   import type { SvelteSet } from "svelte/reactivity";
+  import { appDataDir } from "@tauri-apps/api/path";
+  import { openPath } from "@tauri-apps/plugin-opener";
+
+  async function openAppData() {
+    await openPath(await appDataDir());
+  }
 
   let {
     entries,
@@ -74,6 +80,7 @@
         </div>
       {/if}
       <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
+      <button class="folder" onclick={openAppData}>Open app data folder…</button>
     </header>
 
     <div class="scroll">
