@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
-  import { songEndMs, timePhrases } from "../playback/clock";
+  import { findInstrumentalGaps, songEndMs, timePhrases, type TimeRange } from "../playback/clock";
   import { msAtBeat } from "../parser/ultrastar";
   import { reportProgress } from "../queue/queue";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
@@ -84,9 +84,11 @@
   // svelte-ignore state_referenced_locally
   const videoIsMaster = !loaded.audioUrl && !!loaded.videoUrl;
 
-  const lanes = song.voices.map(
-    (voice) => new LyricsLane(timePhrases(voice, timing), timing),
-  );
+  const phrasesPerVoice = song.voices.map((voice) => timePhrases(voice, timing));
+  const lanes = phrasesPerVoice.map((phrases) => new LyricsLane(phrases, timing));
+  const instrumentalGaps = findInstrumentalGaps(phrasesPerVoice);
+  // Updated every frame; read by the Tab key handler and the HUD hint.
+  let currentGap: TimeRange | undefined;
 
   // When all lyrics are sung the outro keeps playing; from that point on the
   // HUD offers the skip shortcut.
@@ -126,6 +128,9 @@
     const rawT = nowMs();
     // Visual layers render earlier by the configured display offset.
     const t = rawT + displayOffsetMs;
+    // Cut off the last second so this hint yields to the next phrase's own
+    // countdown-dots window instead of fighting it for the same space.
+    currentGap = instrumentalGaps.find((g) => rawT >= g.startMs && rawT < g.endMs - 1000);
 
     // Slave the muted video to the audio clock.
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
@@ -220,8 +225,13 @@
     ctx.fillText(text, barX + barW + 12, barY + barH / 2);
 
     // Outro: all lyrics sung, offer the skip shortcut next to the bar.
-    if (lastLyricEndMs > 0 && t >= lastLyricEndMs) {
-      const hint = "Tab: next song";
+    // Instrumental section: offer to jump ahead to the next vocal instead.
+    const hint = lastLyricEndMs > 0 && t >= lastLyricEndMs
+      ? "Tab: next song"
+      : currentGap
+        ? "Tab: skip instrumental"
+        : null;
+    if (hint) {
       const timeWidth = ctx.measureText(text).width;
       ctx.font = `600 ${Math.round(fontSize * 0.8)}px "Segoe UI", system-ui, sans-serif`;
       const x = barX + barW + 12 + timeWidth + 24;
@@ -314,7 +324,16 @@
         break;
       case "Tab":
         e.preventDefault();
-        finish(); // skip to next in queue
+        if (currentGap) {
+          const m = master();
+          if (m) {
+            // Land 5s before the next vocal so the countdown dots play
+            // normally; clamp forward-only in case of a late press.
+            m.currentTime = Math.max(nowMs(), currentGap.endMs - 5000) / 1000;
+          }
+        } else {
+          finish(); // skip to next in queue
+        }
         break;
       case "Escape":
         confirmingQuit = true;

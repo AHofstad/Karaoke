@@ -35,3 +35,42 @@ export function displayPhraseIndex(phrases: TimedPhrase[], nowMs: number): numbe
 export function songEndMs(song: ParsedSong): number | undefined {
   return song.timing.endMs;
 }
+
+export interface TimeRange {
+  startMs: number;
+  endMs: number;
+}
+
+/**
+ * Long stretches with no lyrics in ANY voice (guitar solos etc.) — a duet is
+ * only "instrumental" where both voices are silent. Doesn't report a gap
+ * after the last phrase; that's the existing outro/skip-to-next-song path.
+ */
+export function findInstrumentalGaps(phrasesPerVoice: TimedPhrase[][], minGapMs = 15000): TimeRange[] {
+  const intervals = phrasesPerVoice
+    .flat()
+    .map((p) => ({ startMs: p.startMs, endMs: p.endMs }))
+    .sort((a, b) => a.startMs - b.startMs);
+  if (intervals.length === 0) return [];
+
+  const merged: TimeRange[] = [];
+  for (const iv of intervals) {
+    const last = merged[merged.length - 1];
+    if (last && iv.startMs <= last.endMs) {
+      last.endMs = Math.max(last.endMs, iv.endMs);
+    } else {
+      merged.push({ ...iv });
+    }
+  }
+
+  const gaps: TimeRange[] = [];
+  if (merged[0].startMs > minGapMs) {
+    gaps.push({ startMs: 0, endMs: merged[0].startMs });
+  }
+  for (let i = 1; i < merged.length; i++) {
+    if (merged[i].startMs - merged[i - 1].endMs > minGapMs) {
+      gaps.push({ startMs: merged[i - 1].endMs, endMs: merged[i].startMs });
+    }
+  }
+  return gaps;
+}
