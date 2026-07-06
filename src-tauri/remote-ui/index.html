@@ -9,7 +9,7 @@
   body {
     font-family: "Segoe UI", system-ui, sans-serif;
     background: #10121a; color: #eee;
-    padding: 0.8rem; padding-bottom: 4.4rem;
+    padding: 0.8rem; padding-bottom: calc(4.4rem + env(safe-area-inset-bottom));
   }
   h1 { font-size: 1.15rem; margin-bottom: 0.6rem; }
   h2 { font-size: 1rem; margin: 0.3rem 0 0.5rem; }
@@ -58,6 +58,7 @@
   .tabs {
     position: fixed; left: 0; right: 0; bottom: 0; display: flex;
     background: #171b29; border-top: 1px solid #2a2f45;
+    padding-bottom: env(safe-area-inset-bottom);
   }
   .tabs button {
     flex: 1; background: none; color: #9aa3b8; border-radius: 0;
