@@ -27,6 +27,8 @@ Charts are standard UltraStar `.txt` files. The parser is deliberately lenient (
 
 ## For developers
 
+This project was developed with [Claude Code](https://claude.com/claude-code), Anthropic's AI coding assistant. The codebase and architecture reflect AI-assisted development practices.
+
 Prereqs: Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded/updated automatically by the release script; for `tauri dev` transcode testing before the first release build, copy any ffmpeg.exe there manually or run the release script once.
 
 ```powershell
