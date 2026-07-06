@@ -507,7 +507,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div class="sing">
+<div class="sing" class:queue-open={queueOpen}>
   {#if videoSrc && !videoFailed}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
@@ -622,6 +622,11 @@
     height: 100%;
     object-fit: contain;
     background: #000;
+    transition: width 0.15s ease;
+  }
+  .sing.queue-open video,
+  .sing.queue-open .bg {
+    width: calc(100% - 320px);
   }
   /* Hide the video until its dimensions are known to avoid a brief
      small top-left flash before layout settles. */
@@ -641,6 +646,10 @@
     inset: 0;
     width: 100%;
     height: 100%;
+    transition: width 0.15s ease;
+  }
+  .sing.queue-open canvas {
+    width: calc(100% - 320px);
   }
   .overlay {
     position: absolute;
