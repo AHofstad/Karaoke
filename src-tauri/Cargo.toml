@@ -3,6 +3,7 @@ name = "karaoke"
 version = "0.7.0"
 description = "UltraStar-compatible karaoke player with duet support and LAN queue remote"
 authors = ["Aron van der Hofstad"]
+license = "GPL-3.0-or-later"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

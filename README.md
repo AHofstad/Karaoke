@@ -102,3 +102,7 @@ The portable exe needs `ffmpeg.exe` next to it (the script includes it); the ins
 The script checks gyan.dev for the latest ffmpeg release on every run and updates the sidecar automatically when a newer version exists (keeps the current one if offline).
 
 Architecture and milestone plan: see [PLAN.md](PLAN.md).
+
+## License
+
+GPL v3 — see [LICENSE](LICENSE). Modifications and derivative works distributed to others must remain open source under the same license.
