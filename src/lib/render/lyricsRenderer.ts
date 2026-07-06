@@ -36,6 +36,8 @@ export interface LaneOptions {
    * and look broken rather than simply not-yet-relevant.
    */
   showCountdown: boolean;
+  /** Fill the whole syllable the instant its timing starts, instead of a progressive left-to-right reveal. */
+  instantSyllableFill: boolean;
 }
 
 const NEXT_LINE_SCALE = 0.6;
@@ -73,7 +75,7 @@ export class LyricsLane {
     if (nowMs < current.startMs - TEXT_LOOKAHEAD_MS) return;
     const layout = this.layoutFor(idx, ctx, maxWidth, opts.baseFontSize, false);
 
-    this.drawPhrase(ctx, current, layout, nowMs, width, opts.centerY, opts.colors);
+    this.drawPhrase(ctx, current, layout, nowMs, width, opts.centerY, opts.colors, opts.instantSyllableFill);
 
     const next = this.phrases[idx + 1];
     if (next) {
@@ -118,6 +120,7 @@ export class LyricsLane {
     width: number,
     centerY: number,
     colors: LaneColors,
+    instantSyllableFill: boolean,
   ): void {
     const left = (width - layout.totalWidth) / 2;
     ctx.textBaseline = "middle";
@@ -141,7 +144,7 @@ export class LyricsLane {
       // Sung overlay: full for finished notes, clipped fraction for the active one.
       let fillFraction = 0;
       if (nowMs >= noteEnd) fillFraction = 1;
-      else if (active && noteEnd > noteStart) fillFraction = (nowMs - noteStart) / (noteEnd - noteStart);
+      else if (active) fillFraction = instantSyllableFill ? 1 : (noteEnd > noteStart ? (nowMs - noteStart) / (noteEnd - noteStart) : 1);
 
       if (fillFraction > 0) {
         // Only the right edge of the clip is the fill boundary; pad the other

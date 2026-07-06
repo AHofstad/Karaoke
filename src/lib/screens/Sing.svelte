@@ -49,6 +49,17 @@
   const OFFSET_KEY = "karaoke.displayOffsetMs";
   let displayOffsetMs = $state(Number(localStorage.getItem(OFFSET_KEY)) || 0);
 
+  // Some singers prefer the whole syllable to light up the instant its
+  // timing starts instead of filling left-to-right.
+  const FILL_KEY = "karaoke.instantSyllableFill";
+  let instantSyllableFill = $state(localStorage.getItem(FILL_KEY) === "1");
+
+  function toggleSyllableFill() {
+    instantSyllableFill = !instantSyllableFill;
+    localStorage.setItem(FILL_KEY, instantSyllableFill ? "1" : "0");
+    showNotice(`Syllable fill: ${instantSyllableFill ? "instant" : "progressive"}`);
+  }
+
   function adjustOffset(deltaMs: number) {
     displayOffsetMs += deltaMs;
     localStorage.setItem(OFFSET_KEY, String(displayOffsetMs));
@@ -135,12 +146,14 @@
         colors: SOLO_COLORS,
         baseFontSize,
         showCountdown,
+        instantSyllableFill,
       });
       lanes[1].render(ctx, t, w, {
         centerY: h * 0.45,
         colors: DUET_P2_COLORS,
         baseFontSize,
         showCountdown,
+        instantSyllableFill,
       });
     } else if (lanes.length === 1) {
       lanes[0].render(ctx, t, w, {
@@ -148,6 +161,7 @@
         colors: SOLO_COLORS,
         baseFontSize,
         showCountdown,
+        instantSyllableFill,
       });
     }
 
@@ -293,6 +307,10 @@
       case "-":
       case "_":
         adjustOffset(-50);
+        break;
+      case "f":
+      case "F":
+        toggleSyllableFill();
         break;
       case "Tab":
         e.preventDefault();
@@ -493,7 +511,9 @@
         <h2>{song.artist} – {song.title}</h2>
         <p>
           Space: resume &nbsp;·&nbsp; ←/→: seek &nbsp;·&nbsp; Tab: skip &nbsp;·&nbsp; +/−:
-          display offset ({displayOffsetMs} ms) &nbsp;·&nbsp; Esc: quit
+          display offset ({displayOffsetMs} ms) &nbsp;·&nbsp; F: syllable fill ({instantSyllableFill
+            ? "instant"
+            : "progressive"}) &nbsp;·&nbsp; Esc: quit
         </p>
       </div>
     </div>
