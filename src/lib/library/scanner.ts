@@ -8,10 +8,14 @@ import {
   readTextFile,
   writeTextFile,
 } from "@tauri-apps/plugin-fs";
+import { writable } from "svelte/store";
 import { decodeSongText } from "../parser/encoding";
 import { isUltraStarChart, msAtBeat, parseUltraStar } from "../parser/ultrastar";
 import type { Loudness } from "../playback/gain";
 import { findFileFuzzy } from "../playback/media";
+
+/** Progress of the new/changed-file parse pass of the current scan (cache hits don't count — they're near-instant). */
+export const scanProgress = writable({ done: 0, total: 0 });
 
 export interface LibraryEntry {
   txtPath: string;
@@ -77,6 +81,8 @@ export async function scanLibrary(rootDir: string): Promise<LibraryEntry[]> {
     }
   }
 
+  let scanned = 0;
+  scanProgress.set({ done: 0, total: misses.length });
   await runPool(misses, PARSE_CONCURRENCY, async (file) => {
     let cached: CachedSong = { mtimeMs: file.mtimeMs, size: file.size, entry: null };
     try {
@@ -86,6 +92,8 @@ export async function scanLibrary(rootDir: string): Promise<LibraryEntry[]> {
     }
     nextSongs[file.path] = cached;
     if (cached.entry) entries.push(materialize(cached.entry));
+    scanned++;
+    scanProgress.set({ done: scanned, total: misses.length });
   });
 
   await saveCache({ version: CACHE_VERSION, songs: nextSongs });

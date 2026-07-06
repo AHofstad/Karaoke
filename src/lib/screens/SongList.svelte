@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { LibraryEntry } from "../library/scanner";
-  import { filterEntries } from "../library/scanner";
+  import { filterEntries, scanProgress } from "../library/scanner";
   import { loudnessProgress } from "../library/loudness";
   import type { QueueItem } from "../queue/queue";
   import type { SvelteSet } from "svelte/reactivity";
@@ -78,6 +78,14 @@
     <header>
       <h1>Karaoke</h1>
       <input type="search" placeholder="Search artist, title, tags…" bind:value={query} />
+      {#if scanning && $scanProgress.total > 0}
+        <div class="normalize" title="Parsing new or changed songs">
+          <span>Scanning library… {$scanProgress.done} / {$scanProgress.total}</span>
+          <div class="track">
+            <div class="fill" style="width: {(100 * $scanProgress.done) / $scanProgress.total}%"></div>
+          </div>
+        </div>
+      {/if}
       {#if $loudnessProgress.total > 0 && $loudnessProgress.done < $loudnessProgress.total}
         <div class="normalize" title="Measuring song volume in the background so all songs play equally loud">
           <span>Normalizing volume… {$loudnessProgress.done} / {$loudnessProgress.total}</span>
