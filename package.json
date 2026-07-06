@@ -1,6 +1,6 @@
 {
   "name": "karaoke",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "UltraStar-compatible karaoke player (playback-only) with duet support and LAN queue remote",
   "type": "module",
   "scripts": {
