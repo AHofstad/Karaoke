@@ -13,6 +13,7 @@ import { decodeSongText } from "../parser/encoding";
 import { isUltraStarChart, msAtBeat, parseUltraStar } from "../parser/ultrastar";
 import type { Loudness } from "../playback/gain";
 import { findFileFuzzy } from "../playback/media";
+import { basename, dirname, joinPath } from "../util/path";
 
 /** Progress of the new/changed-file parse pass of the current scan (cache hits don't count — they're near-instant). */
 export const scanProgress = writable({ done: 0, total: 0 });
@@ -135,13 +136,13 @@ async function loadEntry(txtPath: string): Promise<CachedSong["entry"]> {
   const song = parseUltraStar(text);
   if (!isUltraStarChart(song) || song.voices.length === 0) return null;
 
-  const dir = txtPath.slice(0, Math.max(txtPath.lastIndexOf("\\"), txtPath.lastIndexOf("/")));
+  const dir = dirname(txtPath);
   let coverPath: string | undefined;
   let hasVideo = false;
   try {
     const fileNames = (await readDir(dir)).filter((e) => e.isFile).map((e) => e.name);
     const cover = pickCover(fileNames, song.coverFile, song.backgroundFile);
-    if (cover) coverPath = `${dir}\\${cover}`;
+    if (cover) coverPath = joinPath(dir, cover);
     hasVideo = !!(song.videoFile && findFileFuzzy(fileNames, song.videoFile));
   } catch {
     // directory listing failed — entry still usable without cover
@@ -158,7 +159,7 @@ async function loadEntry(txtPath: string): Promise<CachedSong["entry"]> {
   return {
     txtPath,
     dir,
-    title: song.title || txtPath.split("\\").pop() || "?",
+    title: song.title || basename(txtPath) || "?",
     artist: song.artist || "?",
     coverPath,
     hasVideo,
@@ -170,7 +171,7 @@ async function loadEntry(txtPath: string): Promise<CachedSong["entry"]> {
 }
 
 async function cachePath(): Promise<string> {
-  return `${await appDataDir()}\\${CACHE_FILE}`;
+  return joinPath(await appDataDir(), CACHE_FILE);
 }
 
 async function loadCache(): Promise<ScanCache> {

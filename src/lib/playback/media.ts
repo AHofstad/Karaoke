@@ -4,6 +4,7 @@ import { decodeSongText } from "../parser/encoding";
 import { sanitizeMp3 } from "./mp3";
 import type { ParsedSong } from "../parser/types";
 import { isUltraStarChart, parseUltraStar } from "../parser/ultrastar";
+import { dirname, joinPath } from "../util/path";
 
 export interface LoadedSong {
   song: ParsedSong;
@@ -35,7 +36,7 @@ export async function loadSong(txtPath: string): Promise<LoadedSong> {
   const resolveName = (name: string | undefined): string | undefined =>
     name ? findFileFuzzy(fileNames, name) : undefined;
   const toUrl = (actual: string | undefined): string | undefined =>
-    actual ? convertFileSrc(`${dir}\\${actual}`) : undefined;
+    actual ? convertFileSrc(joinPath(dir, actual)) : undefined;
 
   const audioFileName = resolveName(song.audioFile);
   const videoFileName = resolveName(song.videoFile);
@@ -68,7 +69,7 @@ const MIME_BY_EXT: Record<string, string> = {
  * revoke the URL when done.
  */
 export async function loadFileAsBlobUrl(dir: string, fileName: string): Promise<string> {
-  let bytes: Uint8Array = await readFile(`${dir}\\${fileName}`);
+  let bytes: Uint8Array = await readFile(joinPath(dir, fileName));
   const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "mp3") bytes = sanitizeMp3(bytes);
   const blob = new Blob([bytes as BlobPart], { type: MIME_BY_EXT[ext] ?? "application/octet-stream" });
@@ -110,9 +111,4 @@ export function findFileFuzzy(fileNames: string[], wanted: string): string | und
 function stripExtension(name: string): string {
   const i = name.lastIndexOf(".");
   return i > 0 ? name.slice(0, i) : name;
-}
-
-function dirname(path: string): string {
-  const i = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
-  return i >= 0 ? path.slice(0, i) : path;
 }

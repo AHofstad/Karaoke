@@ -3,6 +3,7 @@ import { exists } from "@tauri-apps/plugin-fs";
 import { Command } from "@tauri-apps/plugin-shell";
 import { TARGET_LUFS, type Loudness } from "./gain";
 import { parseLoudnormJson } from "./loudnorm";
+import { joinPath } from "../util/path";
 
 /**
  * Media the WebView cannot decode (MPEG Layer II posing as .mp3, avi/xvid
@@ -11,11 +12,11 @@ import { parseLoudnormJson } from "./loudnorm";
  */
 
 export async function transcodeAudioToMp3(dir: string, fileName: string): Promise<string> {
-  const outPath = `${dir}\\${stripExt(fileName)}.karaoke.mp3`;
+  const outPath = joinPath(dir, `${stripExt(fileName)}.karaoke.mp3`);
   if (!(await exists(outPath))) {
     await runFfmpeg([
       "-y",
-      "-i", `${dir}\\${fileName}`,
+      "-i", joinPath(dir, fileName),
       "-vn",
       "-codec:a", "libmp3lame",
       "-q:a", "2",
@@ -26,11 +27,11 @@ export async function transcodeAudioToMp3(dir: string, fileName: string): Promis
 }
 
 export async function transcodeVideoToMp4(dir: string, fileName: string): Promise<string> {
-  const outPath = `${dir}\\${stripExt(fileName)}.karaoke.mp4`;
+  const outPath = joinPath(dir, `${stripExt(fileName)}.karaoke.mp4`);
   if (!(await exists(outPath))) {
     await runFfmpeg([
       "-y",
-      "-i", `${dir}\\${fileName}`,
+      "-i", joinPath(dir, fileName),
       "-c:v", "libx264",
       "-preset", "veryfast",
       "-crf", "20",

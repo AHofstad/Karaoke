@@ -3,6 +3,7 @@ import { writable } from "svelte/store";
 import { computeGain, type Loudness } from "../playback/gain";
 import { loadSong } from "../playback/media";
 import { measureLoudness } from "../playback/transcode";
+import { joinPath } from "../util/path";
 import type { LibraryEntry } from "./scanner";
 
 /**
@@ -116,7 +117,7 @@ async function defaultMeasure(txtPath: string): Promise<Loudness> {
   const loaded = await loadSong(txtPath);
   const fileName = loaded.audioFileName ?? loaded.videoFileName;
   if (!fileName) throw new Error("no media file");
-  return measureLoudness(`${loaded.dir}\\${fileName}`);
+  return measureLoudness(joinPath(loaded.dir, fileName));
 }
 
 function defaultPersist(txtPath: string, loudness: Loudness): Promise<void> {
