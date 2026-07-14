@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "deb", "appimage"],
     "publisher": "Weebs Software Inc.",
     "externalBin": ["binaries/ffmpeg"],
     "icon": [

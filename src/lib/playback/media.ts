@@ -76,6 +76,15 @@ export async function loadFileAsBlobUrl(dir: string, fileName: string): Promise<
   return URL.createObjectURL(blob);
 }
 
+const LINUX_CODEC_HINT =
+  "On Linux, playback decoding comes from your system's GStreamer install, not the app. " +
+  "Try: sudo apt install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav " +
+  "(Debian/Ubuntu — see README for other distros), then restart the song.";
+
+function isLinux(): boolean {
+  return typeof navigator !== "undefined" && /linux/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent);
+}
+
 /** Human-readable description of an HTMLMediaElement error. */
 export function describeMediaError(el: HTMLMediaElement): string {
   const err = el.error;
@@ -86,7 +95,9 @@ export function describeMediaError(el: HTMLMediaElement): string {
     3: "MEDIA_ERR_DECODE",
     4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
   };
-  return `${names[err.code] ?? `code ${err.code}`}${err.message ? `: ${err.message}` : ""}`;
+  const base = `${names[err.code] ?? `code ${err.code}`}${err.message ? `: ${err.message}` : ""}`;
+  const isCodecError = err.code === 3 || err.code === 4;
+  return isCodecError && isLinux() ? `${base}\n${LINUX_CODEC_HINT}` : base;
 }
 
 /** Case-insensitive lookup of a referenced file among the directory's entries. */
