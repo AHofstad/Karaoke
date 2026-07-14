@@ -127,6 +127,23 @@ interface ParsedSong { headers: Map<string,string>; title: string; artist: strin
 - [x] **M7 — Packaging:** *(installer 28.7 MB + portable zip 40.6 MB in dist\; release exe verified — window + LAN API. Clean-VM test + first-run icon polish pending)* NSIS installer + portable zip, icon, first-run folder picker.
   *Verify:* portable exe on clean VM plays a video song; second device can queue via LAN page; zip ~5–8 MB.
 
+### Linux support
+
+**Goal:** Windows stays zero-install (WebView2 bundles codecs). Linux may require system packages, as long as the app/README says clearly what to install and why. Scope: **Debian/Ubuntu only** for this pass (Fedora needs RPM Fusion for patent codecs — deferred, messier). Bundle both `.deb` and `.AppImage`. Missing-codec errors get a Linux-specific hint in the existing error UI, not a new startup probe.
+
+Rust backend (`src-tauri/src/*.rs`) is already structurally cross-platform (`Path`/`PathBuf`, `app.path().app_data_dir()`, no Windows-only crates; the one `windows_subsystem` attribute is already `cfg`-gated) — no fundamental Rust rework needed. Real blockers: frontend path-joining hardcodes `\\`, Tauri config only targets `nsis`, no Linux ffmpeg sidecar, no Linux release script, no Linux codec guidance.
+
+- [ ] **M8 — Cross-platform path joins:** add a shared `joinPath()` helper (new `src/lib/util/path.ts`, forward-slash join, collapse duplicate separators); replace every hardcoded `${dir}\\${file}` join in `src/lib/library/scanner.ts` (~144, 161, 173 — 161 also needs to split on both `/` and `\`, matching the existing dual-separator pattern at scanner.ts:138/media.ts:116), `src/lib/playback/media.ts` (~38, 71), `src/lib/library/loudness.ts` (~119), `src/lib/playback/transcode.ts` (~14, 18, 29, 33).
+  *Verify:* `npm test` green incl. new `src/lib/util/path.test.ts`; `npm run tauri dev` on Windows still plays a video song, an avi-transcode song, and shows cover art (no regression).
+- [ ] **M9 — Linux bundle targets + ffmpeg sidecar:** `tauri.conf.json` `"targets": ["nsis"]` → `["nsis", "deb", "appimage"]`; add Linux static ffmpeg at `src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu` (untracked, from BtbN's `ffmpeg-builds` releases, mirroring gyan.dev for Windows); confirm `additionalBrowserArgs` (WebView2-only field) is harmlessly ignored by WebKitGTK.
+  *Verify:* on Linux, `npm run tauri build` produces `.deb` + `.AppImage`; install the deb, launch, avi-transcode song plays (sidecar resolves).
+- [ ] **M10 — Linux release script:** `scripts/release.sh` (bash), parallel to `release.ps1` but fully independent (never calls it or is called by it) — fetches/updates the Linux ffmpeg sidecar, runs `npm run tauri build`, copies `.deb`/`.AppImage` into `dist/` with version-stamped names. Build on Ubuntu 22.04/Debian 12 (or a pinned Docker image) to keep the glibc/webkitgtk floor low.
+  *Verify:* clean Ubuntu 22.04 run produces both artifacts; `dpkg -I` shows sane deps; AppImage runs via `--appimage-extract-and-run` without FUSE.
+- [ ] **M11 — Linux codec-error guidance + README:** extend `describeMediaError` (`src/lib/playback/media.ts`) so a Linux `MEDIA_ERR_DECODE`/`MEDIA_ERR_SRC_NOT_SUPPORTED` shows an actionable hint by file extension (`.mp3`/`.mp4`/`.avi` → `gstreamer1.0-plugins-ugly gstreamer1.0-libav`) instead of a generic message, pointing to README for the full list. Add **Linux** subsection to README: build prereqs (`libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`), runtime codec packages (`gstreamer1.0-plugins-good/-bad/-ugly gstreamer1.0-libav`), LAN-remote troubleshooting (`sudo ufw allow <port>/tcp` — no OS firewall prompt like Windows has).
+  *Verify:* fresh Ubuntu VM with only default GStreamer plugins shows the hint on MP3/MP4 playback; works after installing suggested packages.
+- [ ] **M12 — Linux manual verification checklist:** deb install+launch, AppImage launch, folder picker, MP3+MP4 lipsync, avi auto-transcode, cover fallback chain, phone remote over LAN (after `ufw allow`), loudness normalization, F11 fullscreen, pause/quit overlay, codec-missing hint on minimal-GStreamer VM.
+  *Verify:* checklist green on an Ubuntu/Debian VM; Fedora best-effort only.
+
 Post-v1 backlog: playlist persistence, background slideshow, medley preview, singer-name announcements between songs.
 
 ## Testing
@@ -137,6 +154,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - **Timing math tests:** `msAtBeat` vs hand-computed values.
 - **Remote API tests:** POST /api/queue → appears in GET /api/queue; unknown songId → 404.
 - **Manual playback checklist** per milestone (AV sync by eye/ear).
+- **Linux support (M8–M12):** `joinPath()` gets a unit test (`src/lib/util/path.test.ts`); full `npm test` re-run as part of M8's gate to catch regressions from the join-site refactor. M9–M12 (packaging, release script, runtime codec behavior) are manual-checklist only — no Linux desktop-with-webview CI exists in this project.
 
 ## Packaging
 
@@ -149,6 +167,12 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - Two-element AV drift → 0.15s clamp; same-file songs use single `<video>` master path.
 - CP1252 false positives → fallback only on hard UTF-8 decode error.
 - Windows Firewall blocks LAN server → README instruction + optional NSIS firewall rule; app shows warning if bind fails.
+- Linux: GStreamer codec availability varies by distro (Fedora/RHEL exclude patent codecs by default) — can't be solved in-app, mitigated by in-app hint + README (accepted per requirements).
+- Linux: building releases on too new a distro raises the glibc/webkitgtk floor for end users → build on Ubuntu 22.04/Debian 12 or a pinned Docker image.
+- Linux: AppImage needs FUSE on the end-user machine (or `--appimage-extract-and-run`) → README note.
+- Linux: no OS firewall prompt like Windows for the LAN remote server → README `ufw allow <port>/tcp` note only.
+- `joinPath()` refactor (M8) touches 5 frontend files — regression risk on Windows if forward-slash joins misbehave; mitigated by M8's Windows manual-verify gate.
+- `release.ps1`/`release.sh` are independent and can drift (version bump, ffmpeg update pattern) — document the expectation to mirror changes conceptually, without ever calling one from the other.
 
 ## Critical files
 
@@ -159,6 +183,8 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 - `src/queue/queue.ts` + `src-tauri/src/remote.rs` — queue engine + LAN remote server
 - `tests/corpus.test.ts` — golden gate for every parser change
 - `src-tauri/tauri.conf.json` — fs scope, asset protocol, build targets
+- `src/lib/util/path.ts` — cross-platform path join/dirname (Linux support M8)
+- `scripts/release.sh` — Linux release script, parallel to `release.ps1` (Linux support M10)
 
 ## Agent workflow
 
@@ -210,7 +236,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 ### Known-open (nice-to-haves, nothing blocking)
 
 - Clean-VM installer test before wide sharing
-- Linux support assessed and rejected (WebKitGTK codec mess; ~2–3 days if ever wanted)
+- Linux support in progress (M8–M12 above); Fedora/RPM deferred — patent-codec licensing (RPM Fusion) adds friction beyond this pass's scope
 - NSIS "Already installed" upgrade page assessed and rejected (custom template, ~1–2 h + maintenance; silent upgrades work via `setup.exe /S`)
 - `Research\songs\songs\` is a manual copy for dedupe testing — excluded from the golden corpus test
 
@@ -248,3 +274,4 @@ Investigated against current code; root causes found for all but the reorder/dur
 - 2026-07-06 — New feedback round captured (11 items, then a 12th for instrumental-section skip): tag-search placeholder is stale copy not a real bug, menu-flash traced to `songFinished()` state-order race in `+page.svelte`, song-start countdown traced to rAF-vs-playback timing gap — root causes + fix approach for all items in Feedback backlog section above.
 - 2026-07-06 — All 12 feedback-backlog items implemented and committed (one commit per item): gold note coloring removed, active-syllable size bump shrunk, search placeholders fixed, appdata-folder button, safe-area padding on the phone page, song duration shown before queuing, library-screen flash fixed via a `transitioning` flag, countdown-at-start fixed via a `playbackStarted` flag, instant/progressive syllable-fill toggle (`F` key), scan progress bar (reusing the loudness store pattern), queue drag-to-reorder on desktop + phone (shared Rust `move_item` + new `PATCH /api/queue/{uid}`), and instrumental-section skip (`findInstrumentalGaps` in `clock.ts`, context-sensitive Tab key). 124 tests green, `cargo check` clean, `svelte-check` clean.
 - 2026-07-06 — Version 0.7.0 built and shipped (`dist\Karaoke_0.7.0_x64-setup.exe` + portable zip), bundling all 12 feedback-backlog items above. Also landed: queue side panel toggle (Q key) with canvas resize, full shortcuts/settings overview on Esc, GPLv3 license added, personal identifier stripped from `tauri.conf.json`, README expanded (features + Claude Code dev note). 124 tests green.
+- 2026-07-14 — Linux support planned (M8–M12): reversed the earlier "assessed and rejected" call. Audited the Rust backend (already cross-platform clean) and the frontend (5 files with hardcoded `\\` path joins — the real blocker) plus researched WebKitGTK/GStreamer codec realities on Linux. Scope agreed with user: Debian/Ubuntu only this pass, deb + AppImage targets, Windows stays zero-install, Linux codec gaps surfaced via an in-app error hint + README rather than a startup probe. Not yet implemented.
