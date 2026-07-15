@@ -136,6 +136,12 @@
   }
 
   let raf = 0;
+  // Rate-limits the video drift-correction seek below: forcing a seek every
+  // single frame while the video is still ramping up/buffering at playback
+  // start (before it's caught up to the audio clock) can produce a "seek
+  // storm" that stutters/stalls the decoder (worse on Linux/GStreamer than
+  // Chromium) instead of ever letting it settle into sync naturally.
+  let lastVideoSyncMs = -Infinity;
   function frame() {
     raf = requestAnimationFrame(frame);
     const ctx = canvas?.getContext("2d");
@@ -161,7 +167,10 @@
     // Slave the muted video to the audio clock.
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
       const target = audio.currentTime + timing.videoGapSec + displayOffsetMs / 1000;
-      if (Math.abs(video.currentTime - target) > 0.15) video.currentTime = target;
+      if (Math.abs(video.currentTime - target) > 0.15 && rawT - lastVideoSyncMs > 500) {
+        video.currentTime = target;
+        lastVideoSyncMs = rawT;
+      }
       if (audio.paused !== video.paused) {
         if (audio.paused) video.pause();
         else void video.play().catch(() => {});
