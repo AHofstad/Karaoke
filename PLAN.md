@@ -236,6 +236,7 @@ Post-v1 backlog: playlist persistence, background slideshow, medley preview, sin
 
 ### Known-open (nice-to-haves, nothing blocking)
 
+- Linux: pausing (Space) leaves audio audibly playing for a brief moment before going silent, confirmed absent on Windows with the same build/code (`.pause()` is called identically on both) — points to GStreamer/PulseAudio sink buffer drain latency in the VM rather than an app bug. Minor, not investigated further.
 - Clean-VM installer test before wide sharing
 - Linux support: M8–M11 code/config/docs landed; M12 real-VM verification in progress (2026-07-15, Ubuntu 24.04 on VMware) — see progress log for the bugs found and fixed so far (ffmpeg sidecar naming collision, CBR mp3 transcode, mp4 faststart, and a real audio/video desync bug fixed by serving playback media through the local HTTP server instead of Tauri's asset/blob protocol). Fedora/RPM deferred — patent-codec licensing (RPM Fusion) adds friction beyond this pass's scope.
 - NSIS "Already installed" upgrade page assessed and rejected (custom template, ~1–2 h + maintenance; silent upgrades work via `setup.exe /S`)
