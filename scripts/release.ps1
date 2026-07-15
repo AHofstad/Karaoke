@@ -1,6 +1,9 @@
 # Builds the NSIS installer and the portable zip into dist\.
 # Usage: .\scripts\release.ps1   (run from the repo root)
 $ErrorActionPreference = "Stop"
+# Invoke-WebRequest's progress-bar rendering makes downloads dramatically
+# slower (often 10-50x) than the actual network speed; suppress it.
+$ProgressPreference = "SilentlyContinue"
 
 $root = Split-Path $PSScriptRoot -Parent
 Set-Location $root
