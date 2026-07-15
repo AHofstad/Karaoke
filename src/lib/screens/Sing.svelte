@@ -149,6 +149,12 @@
   // storm" that stutters/stalls the decoder (worse on Linux/GStreamer than
   // Chromium) instead of ever letting it settle into sync naturally.
   let lastVideoSyncMs = -Infinity;
+  // Wall-clock (not media-clock) time of the last correction: currentTime
+  // can numerically report "close enough" before the decoder has actually
+  // painted stable frames after a big seek, so revealing the instant drift
+  // looks small can still show a glitch. Require it to stay small for a
+  // real-time stretch after the last correction before trusting it.
+  let lastVideoCorrectionRealMs = -Infinity;
   function frame() {
     raf = requestAnimationFrame(frame);
     const ctx = canvas?.getContext("2d");
@@ -175,10 +181,10 @@
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
       const target = audio.currentTime + timing.videoGapSec + displayOffsetMs / 1000;
       const drift = Math.abs(video.currentTime - target);
-      if (drift > 0.15 && rawT - lastVideoSyncMs > 500) {
+      if (drift > 0.15 && performance.now() - lastVideoCorrectionRealMs > 500) {
         video.currentTime = target;
-        lastVideoSyncMs = rawT;
-      } else if (drift <= 0.15) {
+        lastVideoCorrectionRealMs = performance.now();
+      } else if (drift <= 0.15 && performance.now() - lastVideoCorrectionRealMs > 800) {
         videoSynced = true;
       }
       if (audio.paused !== video.paused) {
@@ -472,6 +478,7 @@
         .then((url) => {
           videoReady = false;
           videoSynced = false;
+          lastVideoCorrectionRealMs = -Infinity;
           videoSrc = url;
           videoFailed = false;
         })

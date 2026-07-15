@@ -35,7 +35,9 @@ if ($latest -and $installed -ne $latest) {
     Write-Host "Updating ffmpeg $installedLabel -> $latest..." -ForegroundColor Cyan
     $zip = Join-Path $env:TEMP "ffmpeg-release-essentials.zip"
     $extract = Join-Path $env:TEMP "ffmpeg-release-essentials"
+    Write-Host "Downloading (no progress bar shown -- suppressed for download speed)..." -ForegroundColor DarkGray
     Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $zip
+    Write-Host "Download complete, extracting..." -ForegroundColor DarkGray
     if (Test-Path $extract) { Remove-Item $extract -Recurse -Force }
     Expand-Archive $zip -DestinationPath $extract
     $exe = Get-ChildItem $extract -Recurse -Filter ffmpeg.exe | Select-Object -First 1
