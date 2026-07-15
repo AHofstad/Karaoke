@@ -44,6 +44,13 @@
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
+  // Distinct from videoReady (which just means loadedmetadata fired): a song
+  // with a large #VIDEOGAP needs an initial big seek to line the video up
+  // with the audio clock, which takes a moment to land. Showing the video
+  // as soon as metadata loads exposes its natural near-0 frames or a decode
+  // stall during that seek -- keep the background/cover fallback up until
+  // the first correction has actually landed.
+  let videoSynced = $state(false);
   // On Linux, Tauri's asset/blob protocol schemes have been observed to
   // desync WebKitGTK/GStreamer playback position from the actually-decoded
   // audio (a real GStreamer/queue2 Range-request bug, confirmed via
@@ -167,9 +174,12 @@
     // Slave the muted video to the audio clock.
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
       const target = audio.currentTime + timing.videoGapSec + displayOffsetMs / 1000;
-      if (Math.abs(video.currentTime - target) > 0.15 && rawT - lastVideoSyncMs > 500) {
+      const drift = Math.abs(video.currentTime - target);
+      if (drift > 0.15 && rawT - lastVideoSyncMs > 500) {
         video.currentTime = target;
         lastVideoSyncMs = rawT;
+      } else if (drift <= 0.15) {
+        videoSynced = true;
       }
       if (audio.paused !== video.paused) {
         if (audio.paused) video.pause();
@@ -461,6 +471,7 @@
       void transcodeVideoToMp4(loaded.dir, loaded.videoFileName)
         .then((url) => {
           videoReady = false;
+          videoSynced = false;
           videoSrc = url;
           videoFailed = false;
         })
@@ -474,7 +485,12 @@
 
   function onVideoReady() {
     videoReady = true;
-    if (videoIsMaster) onMediaReady();
+    // No separate audio clock to slave against, so there's no drift
+    // correction to wait for.
+    if (videoIsMaster) {
+      videoSynced = true;
+      onMediaReady();
+    }
   }
 
   function onAudioError() {
@@ -549,19 +565,21 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="sing" class:queue-open={queueOpen}>
+  {#if loaded.backgroundUrl || loaded.coverUrl}
+    <!-- Sits behind the video; visible through it until videoReady && videoSynced. -->
+    <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
+  {/if}
   {#if videoSrc && !videoFailed}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
-      class:ready={videoReady}
+      class:ready={videoReady && videoSynced}
       src={videoSrc}
       muted={!videoIsMaster}
       onloadedmetadata={onVideoReady}
       onerror={onVideoError}
       onended={() => videoIsMaster && finish()}
     ></video>
-  {:else if loaded.backgroundUrl || loaded.coverUrl}
-    <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
   {/if}
 
   {#if loaded.audioUrl}
