@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decodeSongText } from "../src/lib/parser/encoding";
@@ -22,9 +22,14 @@ function findTxtFiles(dir: string, depth = 0): string[] {
   return out;
 }
 
-const txtFiles = findTxtFiles(SONGS_DIR);
+// Research/songs is a local corpus of real UltraStar charts, not committed to
+// git (large audio/video files). Skip this whole file when it's absent
+// instead of failing — any fresh clone (any OS) won't have it.
+const hasCorpus = existsSync(SONGS_DIR);
+const txtFiles = hasCorpus ? findTxtFiles(SONGS_DIR) : [];
+const maybeDescribe = hasCorpus ? describe : describe.skip;
 
-describe("golden corpus", () => {
+maybeDescribe("golden corpus", () => {
   it("finds the corpus", () => {
     expect(txtFiles.length).toBeGreaterThan(40);
   });
@@ -71,7 +76,7 @@ describe("golden corpus", () => {
   });
 });
 
-describe("targeted real-file assertions", () => {
+maybeDescribe("targeted real-file assertions", () => {
   const byName = (needle: string) => {
     const hit = txtFiles.find((f) => f.toLowerCase().includes(needle.toLowerCase()));
     if (!hit) throw new Error(`corpus file not found: ${needle}`);
