@@ -64,6 +64,11 @@
     if (typeof dir === "string") await rescan(dir);
   }
 
+  async function refreshLibrary() {
+    const dir = localStorage.getItem(ROOT_KEY);
+    if (dir) await rescan(dir);
+  }
+
   async function refreshQueue() {
     try {
       queue = await getQueue();
@@ -202,6 +207,7 @@
     onQueueClear={() => void clearQueue()}
     onPlayNext={() => void playNext()}
     onChangeFolder={pickFolder}
+    onRefreshLibrary={() => void refreshLibrary()}
   />
   {#if error}
     <p class="error">{error}</p>

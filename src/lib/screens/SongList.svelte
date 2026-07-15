@@ -30,6 +30,7 @@
     onQueueClear,
     onPlayNext,
     onChangeFolder,
+    onRefreshLibrary,
     scanning,
   }: {
     entries: LibraryEntry[];
@@ -43,6 +44,7 @@
     onQueueClear: () => void;
     onPlayNext: () => void;
     onChangeFolder: () => void;
+    onRefreshLibrary: () => void;
     scanning: boolean;
   } = $props();
 
@@ -97,6 +99,7 @@
         </div>
       {/if}
       <div class="folder-buttons">
+        <button class="folder" onclick={onRefreshLibrary} disabled={scanning}>Refresh library</button>
         <button class="folder" onclick={onChangeFolder}>Change song folder…</button>
         <button class="folder" onclick={openAppData}>Open app data folder…</button>
       </div>
