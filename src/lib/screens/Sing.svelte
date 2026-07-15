@@ -44,13 +44,6 @@
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
-  // Distinct from videoReady (which just means loadedmetadata fired): a song
-  // with a large #VIDEOGAP needs an initial big seek to line the video up
-  // with the audio clock, which takes a moment to land. Showing the video
-  // as soon as metadata loads exposes its natural near-0 frames or a decode
-  // stall during that seek -- keep the background/cover fallback up until
-  // the first correction has actually landed.
-  let videoSynced = $state(false);
   // On Linux, Tauri's asset/blob protocol schemes have been observed to
   // desync WebKitGTK/GStreamer playback position from the actually-decoded
   // audio (a real GStreamer/queue2 Range-request bug, confirmed via
@@ -116,14 +109,6 @@
   // is a video, the video element is the master instead.
   // svelte-ignore state_referenced_locally
   const videoIsMaster = !loaded.audioUrl && !!loaded.videoUrl;
-  // A meaningfully nonzero #VIDEOGAP means the video needs a big initial seek
-  // to line up with the audio, which can visibly glitch while the decoder
-  // catches up (worse on Linux/GStreamer). Only songs that actually need this
-  // protection pay for it -- showing the cover/background image simultaneously
-  // behind the video, held up for a fixed real-time window instead of trying
-  // (and repeatedly failing) to detect "stabilized" from currentTime alone.
-  // svelte-ignore state_referenced_locally
-  const needsVideoGapProtection = !videoIsMaster && Math.abs(timing.videoGapSec) > 1;
 
   const phrasesPerVoice = song.voices.map((voice) => timePhrases(voice, timing));
   const lanes = phrasesPerVoice.map((phrases) => new LyricsLane(phrases, timing));
@@ -159,7 +144,6 @@
   // wall-clock time, not the media clock -- the media clock moves backward
   // on a rewind, which would otherwise block corrections after seeking back.
   let lastVideoCorrectionRealMs = -Infinity;
-  let hadBigVideoCorrection = false;
   function frame() {
     raf = requestAnimationFrame(frame);
     const ctx = canvas?.getContext("2d");
@@ -185,19 +169,9 @@
     // Slave the muted video to the audio clock.
     if (!videoIsMaster && video && audio && !videoFailed && videoReady) {
       const target = audio.currentTime + timing.videoGapSec + displayOffsetMs / 1000;
-      const drift = Math.abs(video.currentTime - target);
-      if (drift > 0.15 && performance.now() - lastVideoCorrectionRealMs > 500) {
+      if (Math.abs(video.currentTime - target) > 0.15 && performance.now() - lastVideoCorrectionRealMs > 500) {
         video.currentTime = target;
         lastVideoCorrectionRealMs = performance.now();
-        hadBigVideoCorrection = true;
-      }
-      if (!needsVideoGapProtection) {
-        videoSynced = true;
-      } else if (hadBigVideoCorrection && performance.now() - lastVideoCorrectionRealMs > 2000) {
-        // Fixed real-time hold instead of trusting currentTime "looks close
-        // enough": GStreamer has repeatedly reported a stable-looking
-        // position while still visibly glitching underneath.
-        videoSynced = true;
       }
       if (audio.paused !== video.paused) {
         if (audio.paused) video.pause();
@@ -489,9 +463,7 @@
       void transcodeVideoToMp4(loaded.dir, loaded.videoFileName)
         .then((url) => {
           videoReady = false;
-          videoSynced = false;
           lastVideoCorrectionRealMs = -Infinity;
-          hadBigVideoCorrection = false;
           videoSrc = url;
           videoFailed = false;
         })
@@ -505,10 +477,7 @@
 
   function onVideoReady() {
     videoReady = true;
-    // No separate audio clock to slave against, so there's no drift
-    // correction to wait for.
     if (videoIsMaster) {
-      videoSynced = true;
       onMediaReady();
     }
   }
@@ -585,24 +554,18 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="sing" class:queue-open={queueOpen}>
-  {#if needsVideoGapProtection}
-    {#if loaded.backgroundUrl || loaded.coverUrl}
-      <!-- Sits behind the video; visible through it until videoReady && videoSynced. -->
-      <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
-    {/if}
-  {/if}
   {#if videoSrc && !videoFailed}
     <!-- svelte-ignore a11y_media_has_caption -->
     <video
       bind:this={video}
-      class:ready={videoReady && videoSynced}
+      class:ready={videoReady}
       src={videoSrc}
       muted={!videoIsMaster}
       onloadedmetadata={onVideoReady}
       onerror={onVideoError}
       onended={() => videoIsMaster && finish()}
     ></video>
-  {:else if !needsVideoGapProtection && (loaded.backgroundUrl || loaded.coverUrl)}
+  {:else if loaded.backgroundUrl || loaded.coverUrl}
     <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
   {/if}
 
