@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
+  import { describeMediaError, isLinux, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { findInstrumentalGaps, songEndMs, timePhrases, type TimeRange } from "../playback/clock";
   import { msAtBeat } from "../parser/ultrastar";
@@ -36,11 +36,18 @@
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
+  // On Linux, the asset protocol's HTTP-range streaming into WebKitGTK's
+  // <audio> has been observed to silently jump playback position mid-song
+  // (no error event, decoding otherwise clean per gst-play-1.0/ffprobe) --
+  // route straight through the known-reliable blob path instead of trying
+  // the asset URL first.
   // svelte-ignore state_referenced_locally
-  let audioSrc = $state(loaded.audioUrl);
+  const linuxAudioBlockedByDefault = isLinux() && !!loaded.audioFileName;
+  // svelte-ignore state_referenced_locally
+  let audioSrc = $state(linuxAudioBlockedByDefault ? undefined : loaded.audioUrl);
   // svelte-ignore state_referenced_locally
   let videoSrc = $state(loaded.videoUrl);
-  let triedBlobFallback = false;
+  let triedBlobFallback = linuxAudioBlockedByDefault;
   let triedAudioTranscode = false;
   let triedVideoTranscode = false;
   let blobUrl: string | undefined;
@@ -489,6 +496,16 @@
   }
 
   onMount(() => {
+    if (linuxAudioBlockedByDefault && loaded.audioFileName) {
+      void loadFileAsBlobUrl(loaded.dir, loaded.audioFileName)
+        .then((url) => {
+          blobUrl = url;
+          audioSrc = url;
+        })
+        .catch((e) => {
+          error = `Could not load audio: ${loaded.song.audioFile ?? "unknown file"} (blob read failed: ${e})`;
+        });
+    }
     raf = requestAnimationFrame(frame);
     // Feed the remote server the remaining time for queue ETAs.
     const progressTimer = setInterval(() => {
