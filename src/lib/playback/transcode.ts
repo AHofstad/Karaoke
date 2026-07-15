@@ -19,7 +19,11 @@ export async function transcodeAudioToMp3(dir: string, fileName: string): Promis
       "-i", joinPath(dir, fileName),
       "-vn",
       "-codec:a", "libmp3lame",
-      "-q:a", "2",
+      // Fixed bitrate, not -q:a (VBR): GStreamer's mp3 decoder (Linux
+      // playback) estimates position from a byte-offset/bitrate ratio, which
+      // is exact for CBR but drifts/jumps on VBR streams that lack a
+      // reliable seek table.
+      "-b:a", "192k",
       outPath,
     ]);
   }
