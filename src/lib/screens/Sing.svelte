@@ -116,6 +116,14 @@
   // is a video, the video element is the master instead.
   // svelte-ignore state_referenced_locally
   const videoIsMaster = !loaded.audioUrl && !!loaded.videoUrl;
+  // A meaningfully nonzero #VIDEOGAP means the video needs a big initial seek
+  // to line up with the audio, which can visibly glitch while the decoder
+  // catches up (worse on Linux/GStreamer). Only songs that actually need this
+  // protection pay for it -- showing the cover/background image simultaneously
+  // behind the video, held up for a fixed real-time window instead of trying
+  // (and repeatedly failing) to detect "stabilized" from currentTime alone.
+  // svelte-ignore state_referenced_locally
+  const needsVideoGapProtection = !videoIsMaster && Math.abs(timing.videoGapSec) > 1;
 
   const phrasesPerVoice = song.voices.map((voice) => timePhrases(voice, timing));
   const lanes = phrasesPerVoice.map((phrases) => new LyricsLane(phrases, timing));
@@ -147,14 +155,11 @@
   // single frame while the video is still ramping up/buffering at playback
   // start (before it's caught up to the audio clock) can produce a "seek
   // storm" that stutters/stalls the decoder (worse on Linux/GStreamer than
-  // Chromium) instead of ever letting it settle into sync naturally.
-  let lastVideoSyncMs = -Infinity;
-  // Wall-clock (not media-clock) time of the last correction: currentTime
-  // can numerically report "close enough" before the decoder has actually
-  // painted stable frames after a big seek, so revealing the instant drift
-  // looks small can still show a glitch. Require it to stay small for a
-  // real-time stretch after the last correction before trusting it.
+  // Chromium) instead of ever letting it settle into sync naturally. Uses
+  // wall-clock time, not the media clock -- the media clock moves backward
+  // on a rewind, which would otherwise block corrections after seeking back.
   let lastVideoCorrectionRealMs = -Infinity;
+  let hadBigVideoCorrection = false;
   function frame() {
     raf = requestAnimationFrame(frame);
     const ctx = canvas?.getContext("2d");
@@ -184,7 +189,14 @@
       if (drift > 0.15 && performance.now() - lastVideoCorrectionRealMs > 500) {
         video.currentTime = target;
         lastVideoCorrectionRealMs = performance.now();
-      } else if (drift <= 0.15 && performance.now() - lastVideoCorrectionRealMs > 800) {
+        hadBigVideoCorrection = true;
+      }
+      if (!needsVideoGapProtection) {
+        videoSynced = true;
+      } else if (hadBigVideoCorrection && performance.now() - lastVideoCorrectionRealMs > 2000) {
+        // Fixed real-time hold instead of trusting currentTime "looks close
+        // enough": GStreamer has repeatedly reported a stable-looking
+        // position while still visibly glitching underneath.
         videoSynced = true;
       }
       if (audio.paused !== video.paused) {
@@ -479,6 +491,7 @@
           videoReady = false;
           videoSynced = false;
           lastVideoCorrectionRealMs = -Infinity;
+          hadBigVideoCorrection = false;
           videoSrc = url;
           videoFailed = false;
         })
@@ -572,9 +585,11 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="sing" class:queue-open={queueOpen}>
-  {#if loaded.backgroundUrl || loaded.coverUrl}
-    <!-- Sits behind the video; visible through it until videoReady && videoSynced. -->
-    <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
+  {#if needsVideoGapProtection}
+    {#if loaded.backgroundUrl || loaded.coverUrl}
+      <!-- Sits behind the video; visible through it until videoReady && videoSynced. -->
+      <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
+    {/if}
   {/if}
   {#if videoSrc && !videoFailed}
     <!-- svelte-ignore a11y_media_has_caption -->
@@ -587,6 +602,8 @@
       onerror={onVideoError}
       onended={() => videoIsMaster && finish()}
     ></video>
+  {:else if !needsVideoGapProtection && (loaded.backgroundUrl || loaded.coverUrl)}
+    <img class="bg" src={loaded.backgroundUrl ?? loaded.coverUrl} alt="" />
   {/if}
 
   {#if loaded.audioUrl}
