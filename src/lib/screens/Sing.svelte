@@ -1,11 +1,19 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { describeMediaError, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
+  import { describeMediaError, isLinux, loadFileAsBlobUrl, type LoadedSong } from "../playback/media";
   import { transcodeAudioToMp3, transcodeVideoToMp4 } from "../playback/transcode";
   import { findInstrumentalGaps, songEndMs, timePhrases, type TimeRange } from "../playback/clock";
   import { msAtBeat } from "../parser/ultrastar";
-  import { formatEta, queueEtas, reportProgress, type QueueItem } from "../queue/queue";
+  import {
+    formatEta,
+    getRemoteInfo,
+    queueEtas,
+    reportProgress,
+    setNowPlayingMedia,
+    type QueueItem,
+  } from "../queue/queue";
   import { DUET_P2_COLORS, LyricsLane, SOLO_COLORS } from "../render/lyricsRenderer";
+  import { joinPath } from "../util/path";
 
   let {
     loaded,
@@ -36,10 +44,18 @@
   let error = $state("");
   let videoFailed = $state(false);
   let videoReady = $state(false);
+  // On Linux, Tauri's asset/blob protocol schemes have been observed to
+  // desync WebKitGTK/GStreamer playback position from the actually-decoded
+  // audio (a real GStreamer/queue2 Range-request bug, confirmed via
+  // GST_DEBUG logs -- not fixable from encoding/loading-strategy choices
+  // alone). Route media through the app's own local HTTP server instead,
+  // which is a real, standards-compliant Range-serving endpoint.
   // svelte-ignore state_referenced_locally
-  let audioSrc = $state(loaded.audioUrl);
+  const useLocalServerMedia = isLinux();
   // svelte-ignore state_referenced_locally
-  let videoSrc = $state(loaded.videoUrl);
+  let audioSrc = $state(useLocalServerMedia && loaded.audioUrl ? undefined : loaded.audioUrl);
+  // svelte-ignore state_referenced_locally
+  let videoSrc = $state(useLocalServerMedia && loaded.videoUrl ? undefined : loaded.videoUrl);
   let triedBlobFallback = false;
   let triedAudioTranscode = false;
   let triedVideoTranscode = false;
@@ -489,6 +505,22 @@
   }
 
   onMount(() => {
+    if (useLocalServerMedia && (loaded.audioUrl || loaded.videoUrl)) {
+      const audioPath = loaded.audioFileName ? joinPath(loaded.dir, loaded.audioFileName) : undefined;
+      const videoPath = loaded.videoFileName ? joinPath(loaded.dir, loaded.videoFileName) : undefined;
+      void Promise.all([setNowPlayingMedia(audioPath, videoPath), getRemoteInfo()])
+        .then(([, info]) => {
+          const bust = Date.now();
+          if (loaded.audioUrl) audioSrc = `http://127.0.0.1:${info.port}/media/audio?v=${bust}`;
+          if (loaded.videoUrl) videoSrc = `http://127.0.0.1:${info.port}/media/video?v=${bust}`;
+        })
+        .catch(() => {
+          // Local server unavailable for some reason -- fall back to the
+          // asset protocol rather than leaving playback stuck with no src.
+          audioSrc = loaded.audioUrl;
+          videoSrc = loaded.videoUrl;
+        });
+    }
     raf = requestAnimationFrame(frame);
     // Feed the remote server the remaining time for queue ETAs.
     const progressTimer = setInterval(() => {

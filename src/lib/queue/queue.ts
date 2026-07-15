@@ -102,6 +102,10 @@ export const nextInQueue = () =>
 export const reportStopped = () => invoke("playing_stopped");
 export const reportProgress = (remainingMs: number) =>
   invoke("set_progress", { remainingMs });
+/** Registers the currently-loaded song's media so /media/audio and
+ * /media/video (served locally, see remote.rs) know what to stream. */
+export const setNowPlayingMedia = (audioPath?: string, videoPath?: string) =>
+  invoke("set_now_playing_media", { audioPath: audioPath ?? null, videoPath: videoPath ?? null });
 
 export function onQueueUpdated(cb: () => void): Promise<UnlistenFn> {
   return listen("queue-updated", cb);

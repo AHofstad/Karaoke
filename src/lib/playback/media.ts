@@ -81,7 +81,7 @@ const LINUX_CODEC_HINT =
   "Try: sudo apt install gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav " +
   "(Debian/Ubuntu — see README for other distros), then restart the song.";
 
-function isLinux(): boolean {
+export function isLinux(): boolean {
   return typeof navigator !== "undefined" && /linux/i.test(navigator.userAgent) && !/android/i.test(navigator.userAgent);
 }
 

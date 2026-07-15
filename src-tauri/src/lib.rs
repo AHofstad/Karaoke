@@ -30,6 +30,7 @@ pub fn run() {
             remote::queue_next,
             remote::playing_stopped,
             remote::set_progress,
+            remote::set_now_playing_media,
             scan::scan_txt_files,
             loudness::load_loudness,
             loudness::save_loudness,

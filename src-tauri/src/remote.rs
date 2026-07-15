@@ -5,9 +5,9 @@
 //! mirrors the queue through the `queue-updated` event. Song files are never
 //! exposed by path — guests only see numeric ids; covers are streamed by id.
 
-use axum::extract::{Path, Query, State};
+use axum::extract::{Path, Query, Request, State};
 use axum::http::{header, StatusCode};
-use axum::response::{Html, IntoResponse};
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,8 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
+use tower::ServiceExt;
+use tower_http::services::ServeFile;
 
 pub const DEFAULT_PORT: u16 = 7777;
 
@@ -59,6 +61,12 @@ pub struct RemoteState {
     /// txt paths of songs played this session (survives rescans, not restarts).
     pub played: HashSet<String>,
     pub port: u16,
+    /// Absolute paths for the currently-loaded song's media, served locally
+    /// (see `media_audio`/`media_video`) as a workaround for a WebKitGTK/
+    /// GStreamer bug where the custom asset/blob protocol schemes cause
+    /// playback position to desync from decoded audio on Linux.
+    pub now_playing_audio_path: Option<String>,
+    pub now_playing_video_path: Option<String>,
 }
 
 pub type SharedState = Arc<Mutex<RemoteState>>;
@@ -85,6 +93,8 @@ pub fn start(app: AppHandle, state: SharedState) {
             .route("/api/skip", post(skip))
             .route("/api/played", get(played))
             .route("/api/cover/{id}", get(cover))
+            .route("/media/audio", get(media_audio))
+            .route("/media/video", get(media_video))
             .with_state(ctx);
 
         for port in [DEFAULT_PORT, DEFAULT_PORT + 1, DEFAULT_PORT + 2] {
@@ -269,6 +279,29 @@ async fn cover(State(ctx): State<ServerCtx>, Path(id): Path<usize>) -> impl Into
     }
 }
 
+async fn media_audio(State(ctx): State<ServerCtx>, req: Request) -> Response {
+    let path = ctx.state.lock().unwrap().now_playing_audio_path.clone();
+    serve_media_path(path, req).await
+}
+
+async fn media_video(State(ctx): State<ServerCtx>, req: Request) -> Response {
+    let path = ctx.state.lock().unwrap().now_playing_video_path.clone();
+    serve_media_path(path, req).await
+}
+
+/// Serves a file with proper Range/Accept-Ranges support (tower_http's
+/// ServeFile), instead of Tauri's custom asset/blob protocol schemes -- see
+/// the `now_playing_*_path` doc comment for why.
+async fn serve_media_path(path: Option<String>, req: Request) -> Response {
+    match path {
+        Some(p) => match ServeFile::new(p).oneshot(req).await {
+            Ok(res) => res.into_response(),
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        },
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 /// Query params from phones: case-fold and normalize enough for search parity
 /// with the desktop (full unicode folding happens client-side there).
 fn normalize(s: &str) -> String {
@@ -330,6 +363,20 @@ pub fn queue_snapshot(state: tauri::State<'_, SharedState>) -> QueueSnapshot {
 #[tauri::command]
 pub fn set_progress(state: tauri::State<'_, SharedState>, remaining_ms: f64) {
     state.lock().unwrap().now_remaining_ms = Some(remaining_ms);
+}
+
+/// Registers the currently-loaded song's absolute media paths so
+/// `/media/audio` and `/media/video` know what to serve (see `RemoteState`
+/// doc comment).
+#[tauri::command]
+pub fn set_now_playing_media(
+    state: tauri::State<'_, SharedState>,
+    audio_path: Option<String>,
+    video_path: Option<String>,
+) {
+    let mut s = state.lock().unwrap();
+    s.now_playing_audio_path = audio_path;
+    s.now_playing_video_path = video_path;
 }
 
 #[tauri::command]
