@@ -42,6 +42,11 @@ export async function transcodeVideoToMp4(dir: string, fileName: string): Promis
       "-pix_fmt", "yuv420p",
       "-c:a", "aac",
       "-b:a", "192k",
+      // moov atom up front: the asset protocol streams via HTTP range
+      // requests, which needs the index before the media data to start
+      // decoding (default ffmpeg output writes it at the end -- fine for
+      // players that read the whole file, not for range-based streaming).
+      "-movflags", "+faststart",
       outPath,
     ]);
   }
