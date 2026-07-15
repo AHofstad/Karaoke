@@ -91,7 +91,7 @@ Golden notes are treated as normal notes (no special rendering).
 
 ## For developers
 
-**Windows:** Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded/updated automatically by the release script; for `tauri dev` transcode testing before the first release build, copy any ffmpeg.exe there manually or run the release script once.
+**Windows:** Node 20+ and a Rust toolchain (MSVC). The ffmpeg sidecar (`src-tauri/binaries/karaoke-ffmpeg-x86_64-pc-windows-msvc.exe`, untracked) is downloaded/updated automatically by the release script; for `tauri dev` transcode testing before the first release build, copy any ffmpeg.exe there manually (renamed to match) or run the release script once.
 
 ```powershell
 npm install
@@ -108,7 +108,7 @@ sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
   libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
 ```
 
-Drop a Linux static ffmpeg build at `src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu` (untracked, matching the sidecar naming convention — e.g. from [BtbN's ffmpeg-builds](https://github.com/BtbN/FFmpeg-Builds) linux64-gpl release) before `tauri dev`/`tauri build` for transcode testing.
+Drop a Linux static ffmpeg build at `src-tauri/binaries/karaoke-ffmpeg-x86_64-unknown-linux-gnu` (untracked, matching the sidecar naming convention — e.g. from [BtbN's ffmpeg-builds](https://github.com/BtbN/FFmpeg-Builds) linux64-gpl release) before `tauri dev`/`tauri build` for transcode testing. The sidecar is named `karaoke-ffmpeg`, not `ffmpeg`, because Tauri's `.deb` bundler installs `externalBin` sidecars into `/usr/bin` by their base name — a plain `ffmpeg` would collide with the system's real `ffmpeg` package.
 
 ```sh
 npm install
@@ -131,9 +131,9 @@ Build on an older base (Ubuntu 22.04/Debian 12, or a pinned Docker image matchin
 
 This runs `tauri build` and drops both artifacts in `dist\`:
 - `Karaoke_<version>_x64-setup.exe` — NSIS installer (from `src-tauri\target\release\bundle\nsis\`)
-- `Karaoke_<version>_portable.zip` — `karaoke.exe` + `ffmpeg.exe` + README.txt zipped from `src-tauri\target\release\`
+- `Karaoke_<version>_portable.zip` — `karaoke.exe` + `karaoke-ffmpeg.exe` + README.txt zipped from `src-tauri\target\release\`
 
-The portable exe needs `ffmpeg.exe` next to it (the script includes it); the installer bundles it automatically.
+The portable exe needs `karaoke-ffmpeg.exe` next to it (the script includes it); the installer bundles it automatically.
 
 The script checks gyan.dev for the latest ffmpeg release on every run and updates the sidecar automatically when a newer version exists (keeps the current one if offline).
 

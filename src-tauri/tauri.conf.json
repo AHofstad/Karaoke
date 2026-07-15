@@ -30,7 +30,7 @@
     "active": true,
     "targets": ["nsis", "deb", "appimage"],
     "publisher": "Weebs Software Inc.",
-    "externalBin": ["binaries/ffmpeg"],
+    "externalBin": ["binaries/karaoke-ffmpeg"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

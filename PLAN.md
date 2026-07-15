@@ -143,6 +143,7 @@ Rust backend (`src-tauri/src/*.rs`) is already structurally cross-platform (`Pat
   *Verify:* fresh Ubuntu VM with only default GStreamer plugins shows the hint on MP3/MP4 playback; works after installing suggested packages.
 - [ ] **M12 — Linux manual verification checklist:** deb install+launch, AppImage launch, folder picker, MP3+MP4 lipsync, avi auto-transcode, cover fallback chain, phone remote over LAN (after `ufw allow`), loudness normalization, F11 fullscreen, pause/quit overlay, codec-missing hint on minimal-GStreamer VM.
   *Verify:* checklist green on an Ubuntu/Debian VM; Fedora best-effort only.
+  - **Bug found and fixed 2026-07-15:** the `.deb` package failed to coexist with the system `ffmpeg` package — Tauri's deb bundler installs `externalBin` sidecars into `/usr/bin` by their base name, so the `ffmpeg` sidecar collided with `/usr/bin/ffmpeg` from Ubuntu's real `ffmpeg` package (`dpkg` refused install/upgrade with "trying to overwrite ... which is also in package karaoke"). Fixed by renaming the sidecar identifier from `ffmpeg` to `karaoke-ffmpeg` everywhere: `tauri.conf.json` externalBin, `capabilities/default.json` shell allow-execute, `transcode.ts`'s `Command.sidecar()` call, both release scripts, and README. Not yet re-verified with a rebuilt `.deb` on the VM.
 
 Post-v1 backlog: playlist persistence, background slideshow, medley preview, singer-name announcements between songs.
 

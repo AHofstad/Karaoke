@@ -10,7 +10,7 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-ffmpeg_sidecar="src-tauri/binaries/ffmpeg-x86_64-unknown-linux-gnu"
+ffmpeg_sidecar="src-tauri/binaries/karaoke-ffmpeg-x86_64-unknown-linux-gnu"
 ffmpeg_url="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
 
 installed_version() {

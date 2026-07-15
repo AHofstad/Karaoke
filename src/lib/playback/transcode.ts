@@ -60,7 +60,7 @@ export async function measureLoudness(filePath: string): Promise<Loudness> {
 }
 
 async function runFfmpeg(args: string[]): Promise<{ stderr: string }> {
-  const result = await Command.sidecar("binaries/ffmpeg", args).execute();
+  const result = await Command.sidecar("binaries/karaoke-ffmpeg", args).execute();
   if (result.code !== 0) {
     throw new Error(`ffmpeg exited with ${result.code}: ${result.stderr.slice(-500)}`);
   }

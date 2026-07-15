@@ -8,7 +8,7 @@ Set-Location $root
 # ffmpeg sidecar: always kept at the latest gyan.dev release build. Each run
 # compares the installed version against the published one and re-downloads
 # when they differ; network failure keeps the existing binary.
-$ffmpegSidecar = "src-tauri\binaries\ffmpeg-x86_64-pc-windows-msvc.exe"
+$ffmpegSidecar = "src-tauri\binaries\karaoke-ffmpeg-x86_64-pc-windows-msvc.exe"
 
 function Get-InstalledFfmpegVersion {
     if (-not (Test-Path $ffmpegSidecar)) { return $null }
@@ -62,11 +62,11 @@ Copy-Item "src-tauri\target\release\bundle\nsis\Karaoke_${version}_x64-setup.exe
 $staging = Join-Path $env:TEMP "karaoke-portable-$version"
 New-Item -ItemType Directory -Force $staging | Out-Null
 Copy-Item src-tauri\target\release\karaoke.exe $staging -Force
-Copy-Item src-tauri\target\release\ffmpeg.exe $staging -Force
+Copy-Item src-tauri\target\release\karaoke-ffmpeg.exe $staging -Force
 @"
 Karaoke $version (portable)
 ========================
-1. Keep karaoke.exe and ffmpeg.exe in the same folder.
+1. Keep karaoke.exe and karaoke-ffmpeg.exe in the same folder.
 2. Start karaoke.exe, click "Change song folder..." and pick your UltraStar songs folder.
 3. Guests: scan the QR code (same Wi-Fi) to queue songs from their phone.
    Allow "Private networks" if Windows Firewall asks.
